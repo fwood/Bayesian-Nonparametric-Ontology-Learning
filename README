@@ -1,0 +1,19 @@
+Global setup:
+ Download and install Git
+  git config --global user.name "Your Name"
+  git config --global user.email frank.donald.wood@gmail.com
+        
+Next steps:
+  mkdir Bayesian-Nonparametric-Ontology-Learning
+  cd Bayesian-Nonparametric-Ontology-Learning
+  git init
+  touch README
+  git add README
+  git commit -m 'first commit'
+  git remote add origin git@github.com:fwood/Bayesian-Nonparametric-Ontology-Learning.git
+  git push origin master
+      
+Existing Git Repo?
+  cd existing_git_repo
+  git remote add origin git@github.com:fwood/Bayesian-Nonparametric-Ontology-Learning.git
+  git push origin master
