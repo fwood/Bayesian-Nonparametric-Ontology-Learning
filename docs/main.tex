@@ -17,13 +17,13 @@
 \newcommand{\comment}[1]{}
 \DeclareMathOperator*{\argmax}{arg\,max}
 
-\title{Probabilistic Deterministic Infinite Automata}
+\title{Bayesian Nonparametric Ontology Learning}
 
 
 \author{
-David Pfau \hspace{1cm} Nicholas Bartlett \hspace{1cm} Frank Wood\\
+Nicholas Bartlett \hspace{1cm} Matthew Hoffman \hspace{1cm} Frank Wood\\
 Columbia University, New York, NY 10027, USA \\
-\texttt{\{pfau@neurotheory,\{bartlett,fwood\}@stat\}.columbia.edu}
+\texttt{\{bartlett, xxx, fwood\}@stat.columbia.edu}
 %\texttt{pfau@neurotheory.columbia.edu} 
 %\texttt{\{bartlett,fwood\}@stat.columbia.edu} 
 }
@@ -38,12 +38,12 @@ Columbia University, New York, NY 10027, USA \\
 
 \newcommand{\fix}{\marginpar{FIX}}
 \newcommand{\new}{\marginpar{NEW}}
-\newcommand{\q}{\xi}
 \newcommand{\state}{q}
 \newcommand{\symb}{\sigma}
 \newcommand{\bmu}{\boldsymbol\mu}
 \newcommand{\bphi}{\boldsymbol\phi}
 \newcommand{\bpi}{\boldsymbol\pi}
+\newcommand{\PY}{\textrm{PY}}
 
 \nipsfinalcopy
 
@@ -51,22 +51,51 @@ Columbia University, New York, NY 10027, USA \\
 
 \maketitle
 
-\input{abstract}
+\section{Introduction}
 
-\input{introduction}
-\input{pdfa}
+Bayesian nonparametrics rules.
 
-\input{model}
+Ontologies rule.
 
-%\input{inference}
+Learning rules.
+
+What could go wrong?
+
+\section{Model Definition}
+
+We begin by assuming that the parameters for $M$ Probabilistic
+Deterministic Finite Automata are sampled according to the following
+process:
+\begin{equation}
+\end{equation}
+
+Conditioned on the latent binary state vector $z_t$ for time $t$, we
+draw word $w_t$ according to a hierarchical Pitman-Yor process:
+\begin{equation}
+\begin{split}
+G_{\epsilon} \sim \PY(H); \quad
+G_z \sim \PY(G_{\gamma(z)}); \quad
+w_t \sim G_{z_t}.
+\end{split}
+\end{equation}
 
 
-%\input{previous_work}
+%% \input{abstract}
 
-\input{results}
-\input{theory}
+%% \input{introduction}
+%% \input{pdfa}
 
-\input{discussion}
+%% \input{model}
+
+%% %\input{inference}
+
+
+%% %\input{previous_work}
+
+%% \input{results}
+%% \input{theory}
+
+%% \input{discussion}
 
 \newpage
 
