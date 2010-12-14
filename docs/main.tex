@@ -1,0 +1,81 @@
+\documentclass{article}
+\usepackage{nips10submit_e,times}
+%\documentstyle[nips07submit_09,times]{article}
+\usepackage[square,numbers]{natbib}
+\usepackage{amsmath, epsfig}
+\usepackage{amsfonts}
+\usepackage{subfigure}
+\usepackage{graphicx}
+\usepackage{amsfonts}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{easybmat}
+\usepackage{footmisc}
+\renewcommand\algorithmiccomment[1]{// \textit{#1}}
+%
+\newcommand{\ignore}[1]{}
+\newcommand{\comment}[1]{}
+\DeclareMathOperator*{\argmax}{arg\,max}
+
+\title{Probabilistic Deterministic Infinite Automata}
+
+
+\author{
+David Pfau \hspace{1cm} Nicholas Bartlett \hspace{1cm} Frank Wood\\
+Columbia University, New York, NY 10027, USA \\
+\texttt{\{pfau@neurotheory,\{bartlett,fwood\}@stat\}.columbia.edu}
+%\texttt{pfau@neurotheory.columbia.edu} 
+%\texttt{\{bartlett,fwood\}@stat.columbia.edu} 
+}
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to \LaTeX{} to determine where to break
+% the lines. Using \AND forces a linebreak at that point. So, if \LaTeX{}
+% puts 3 of 4 authors names on the first line, and the last on the second
+% line, try using \AND instead of \And before the third author name.
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+\newcommand{\q}{\xi}
+\newcommand{\state}{q}
+\newcommand{\symb}{\sigma}
+\newcommand{\bmu}{\boldsymbol\mu}
+\newcommand{\bphi}{\boldsymbol\phi}
+\newcommand{\bpi}{\boldsymbol\pi}
+
+\nipsfinalcopy
+
+\begin{document}
+
+\maketitle
+
+\input{abstract}
+
+\input{introduction}
+\input{pdfa}
+
+\input{model}
+
+%\input{inference}
+
+
+%\input{previous_work}
+
+\input{results}
+\input{theory}
+
+\input{discussion}
+
+\newpage
+
+%\subsubsection*{Acknowledgments}
+
+%\subsubsection*{References}
+\begin{small}
+\bibliographystyle{plainnat}
+\bibliography{../../uber} 
+%\input{modrefs}
+\end{small}
+\end{document}

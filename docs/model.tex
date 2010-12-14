@@ -1,0 +1,177 @@
+% !TEX root = main.tex
+\section{Bayesian PDFA Inference}
+\label{sec:BPDFAs}
+
+We start our description of Bayesian PDFA inference by defining a prior distribution over the parameters of a finite PDFA.  We then show how to analytically marginalize nuisance parameters out of the model and derive a Metropolis-Hastings sampler for posterior inference using the resulting collapsed representation.  We discuss the limit of our model as the number of states in the PDFA goes to infinity.  We call this limit the probabilistic deterministic infinite automaton (PDIA).  We develop a PDIA sampler that carries over from the finite case in a natural way.
+
+%, and show that many of the elements of the transition matrix can be ignored without affecting the correctness of sampling
+
+\subsection{A PDFA Prior}
+
+We assume that the set of states $Q$, set of symbols $\Sigma$, and initial state $q_0$ of a PDFA are known but that the transition and emission functions are unknown.  The PDFA prior then consists of a prior over both the transition function $\delta$ and the emission probability function $\pi$.  In the finite case $\delta$ and $\pi$ are representable as finite matrices, with one column per element of $\Sigma$ and one row per element of $Q$.  For each column $j$ ($j$ co-indexes columns and set elements) of the transition matrix $\delta$, our prior stipulates that the elements of that column are  i.i.d. draws from a discrete distribution $\bphi_j$ over $Q$, that is, $\delta_{ij} \sim [\bphi_1,\ldots,\bphi_{|\Sigma|}], \; 0 \leq i\leq|Q|-1$.  The $\bphi_j$ represent transition tendencies given a symbol, if the $i$th element of $\bphi_{j}$ is large then state $q_i$ is likely to be transitioned to anytime the last symbol was $\symb_j$.   The $\bphi_{j}$'s are themselves given a shared Dirichlet prior with parameters $\alpha\bmu$, where $\alpha$ is a concentration and $\bmu$ is a template transition probability vector.   If the $i$th element of $\bmu$ is large then the $i$th state is likely to be transitioned to regardless of the emitted symbol.  We place a uniform Dirichlet prior on $\bmu$ itself, with $\gamma$ total mass and average over $\bmu$ during inference.  This hierarchical Dirichlet construction encourages both general and context specific state reuse.
+ We also place a uniform Dirichlet prior over the per-state emission probabilities $\bpi_{q_i}$ with $\beta$ total mass which smooths emission distribution estimates.  Formally:
+%
+\begin{eqnarray}
+\bmu|\gamma,|Q| & \sim & \mathrm{Dir}\left(\gamma/|Q|,\ldots,\gamma/|Q|\right) \label{gen:mu}  \\
+\bphi_{j}|\alpha,\bmu  & \sim & \mathrm{Dir}(\alpha\bmu) \label{gen:phi} \\
+\bpi_{q_i}|\beta,|\Sigma| & \sim & \mathrm{Dir}(\beta/|\Sigma|,\ldots,\beta/|\Sigma|) \label{gen:pi} \nonumber \\
+\delta_{ij} & \sim & \bphi_{j} \label{gen:delta} \nonumber
+\end{eqnarray}
+%
+where $0 \leq i \leq |Q|-1$ and $1 \leq j \leq |\Sigma|$.  Given a sample from this model we can run the PDFA to generate a sequence of $T$ symbols.  Using $\q_t$ to denote the state of the PDFA at position $t$ in the sequence:
+%
+\begin{equation}
+\q_0 = \state_0, \qquad
+x_0 \sim \bpi_{q_0}, \qquad
+\q_t = \delta(\q_{t-1},x_{t-1}), \qquad
+x_t \sim \bpi_{\q_t} \label{gen} \nonumber
+\end{equation}
+%
+We choose this particular inductive bias, with transitions tied together within a column of $\delta$, because we wanted the most recent symbol emission to be informative about what the next state is.  If we instead had a single Dirichlet prior over all elements of $\delta$, transitions to a few states would be highly likely no matter the context and those states would dominate the behavior of the automata.  If we tied together rows of $\delta$ instead of columns, being in a particular state would tell us more about the sequence of states we came from than the symbols that got us there.  
+%As we would like states to be good statistics of the past for predicting the future, a bias that depends on the most recent symbol is preferable.
+
+ Note that this prior stipulates a fully connected PDFA in which all states may transition to all others and all symbols may be emitted from each state.  This is slightly different that the canonical finite state machine literature where sparse connectivity is usually the norm.
+
+\subsection{PDFA Inference}
+
+Given observational data, we are interested in learning a posterior distribution over PDFAs.  We do this by GIbbs sampling the transition matrix $\delta$ with $\bpi$ and $\bphi_j$ integrated out.  To start inference we need the likelihood function for a fixed PDFA; it is given by
+%
+\[ p(x_{0:T}|\pi,\delta) = \pi(\q_0,x_0)\prod_{t=1}^T \pi(\q_t,x_t) \label{x:def}. \]
+%
+Remember that $\q_t | \q_{t-1}, x_{t-1}$ is deterministic given the transition function $\delta$. 
+We can marginalize $\pi$ out of this expression and express the likelihood of the data in a form that depends only on the counts of symbols emitted from each state.  Define the count matrix $c$ for the sequence $x_{0:T}$ and transition matrix $\delta$ as $c_{ij} = \sum_{t=0}^T I_{ij}(\q_t,x_t)$, where $I_{ij}(\q_t,x_t)$ is an indicator function for the automaton being in state $q_i$ when it generates $x_t$, i.e. $\q_t = q_i$ and $x_t = \sigma_j$. This matrix $c = [c_{ij}]$ gives the number of times each symbol is emitted from each state.  Due to multinomial-Dirichlet conjugacy we can express the probability of a sequence given the transition function $\delta$, the count matrix $c$ and $\beta$:
+%
+\begin{eqnarray}
+ p(x_{0:T}|\delta,c,\beta) & = & \int p(x_{0:T}|\pi,\delta) p(\pi|\beta) d\pi \label{x:factor} %\nonumber \\
+ %& = &  \prod_{i=0}^{|Q|-1} \frac{\Gamma(\beta)}{\Gamma(\frac{\beta}{|\Sigma|})^{|\Sigma|}} \int\pi_{i1}^{\frac{\beta}{|\Sigma|}+c_{i1}-1} \pi_{i2}^{\frac{\beta}{|\Sigma|}+c_{i2}-1} \ldots \pi_{i|\Sigma|}^{\frac{\beta}{|\Sigma|}+c_{i|\Sigma|}-1} d\bpi_i \label{x:int}\\
+= \prod_{i=0}^{|Q|-1} \frac{\Gamma(\beta)}{\Gamma(\frac{\beta}{|\Sigma|})^{|\Sigma|}} \frac{\prod_{j=1}^{|\Sigma|}\Gamma(\frac{\beta}{|\Sigma|} + c_{ij})}{\Gamma(\beta + \sum_{j=1}^{|\Sigma|} c_{ij})} \label{x:end}
+ \end{eqnarray}
+ %
+If the transition matrix $\delta$ is observed we have a closed-form expression for its likelihood given $\bmu$ with all $\bphi_j$'s marginalized out.  Let $v_{ij}$ be the number of times state $q_i$ is transitioned to given that $\sigma_j$ was the last symbol emitted, i.e.~$v_{ij}$ is the number of times $\delta_{i'j} = q_i$ for all states $i'$ in the column $j$. %, that is, $v_{ij} = \displaystyle\sum_{i' = 0}^{|Q|-1} I_{i}(\delta_{i'j})$, $I_i(q_{i'})$ being the indicator function that is only 1 when $q_i' = q_i$. 
+%Given $\bmu$, we can integrate out $\phi$ and express t
+The marginal likelihood of $\delta$ in terms of $\bmu$ is then:
+ %
+ \begin{eqnarray}
+ p(\delta|\bmu,\alpha) & = & \int p(\delta|\phi)p(\phi|\bmu,\alpha) d\phi %\label{delta:factor}
+%  & = & \prod_{j=1}^{|\Sigma|} \frac{\Gamma(\alpha)}{\prod_{i=0}^{|Q|-1}\Gamma(\alpha\mu_i)} \int \phi_{0j}^{\alpha\mu_0+v_{0j}-1} \phi_{1j}^{\alpha\mu_1+v_{1j}-1} \ldots \phi_{|Q|-1,j}^{\alpha\mu_{|Q|-1}+v_{|Q|-1,j}-1} d\bphi_j \label{delta:int}\\
+   =   \prod_{j=1}^{|\Sigma|} \frac{\Gamma(\alpha)}{\prod_{i=0}^{|Q|-1}\Gamma(\alpha\mu_i)} \frac{\prod_{i=0}^{|Q|-1} \Gamma(\alpha\mu_i + v_{ij})}{\Gamma(\alpha + |Q|)} \label{delta:end}
+  \end{eqnarray}
+%
+%\begin{eqnarray}
+%p(\bmu|\delta,\alpha, \gamma) & = & \frac{p(\delta|\bmu,\alpha)p(\bmu|\gamma)}{\int p(\delta|\bmu,\alpha)p(\bmu|\gamma) d\bmu}
+%\end{eqnarray}
+% 
+We perform posterior inference in the finite model by sampling elements of $\delta$ and the vector $\bmu$.  %From the formulas above, it is straightforward to write down the conditional probability for one element of the transition matrix $\delta$. 
+One can sample $\delta_{ij}$ given the rest of the matrix $\delta_{-ij}$ using 
+%
+\begin{equation}
+p(\delta_{ij}|\delta_{-ij},x_{0:T},\bmu,\alpha) \propto p(x_{0:T}|\delta_{ij},\delta_{-ij})p(\delta_{ij}|\delta_{-ij},\bmu,\alpha) \label{delta:cond}
+\end{equation}
+%
+Both terms on the right hand side of this equation have closed-form expressions, the first given in \eqref{x:end}.  The second can be found from \eqref{delta:end} and is
+%
+\begin{equation}
+P(\delta_{ij} = q_{i'}|\delta_{-ij},\alpha,\bmu) = \frac{\alpha\mu_{i'} + v_{i'j}}{\alpha + |Q| - 1} \label{delta:pred}
+\end{equation}
+%
+where $v_{i'j}$ is the number of elements in column $j$ equal to $q_{i'}$  excluding $\delta_{ij}$.  As $|Q|$ is finite, we compute \eqref{delta:cond} for all values of $\delta_{ij}$ and normalize to produce the required conditional probability distribution.
+
+Note that in \eqref{x:end}, the count matrix $c$ may be profoundly impacted by changing even a single element of $\delta$.  The values in $c$ depend on the specific sequence of states the automata used to generate $x$.  Changing the value of a single element of $\delta$ affects the state trajectory the PDFA must follow to generate $x_{0:T}$.  %By changing $\delta_{ij}$, the set of states visited and the order in which those states are visited after the first time $q_i$ emits $\sigma_j$ are affected. 
+ Among other things this means that some elements of $c$ that were nonzero may become zero, and vice versa.
+
+We can reduce the computational cost of inference by deleting transitions $\delta_{ij}$ for which the corresponding counts $c_{ij}$ become 0.  In practical sampler implementations this means that one need not even represent transitions corresponding to zero counts.  The likelihood of the data \eqref{x:end} does not depend on the value of $\delta_{ij}$ if symbol $\sigma_j$ is never emitted while the machine is in state $\state_i$.   In this case sampling from \eqref{delta:cond} is the same as sampling without conditioning on the data at all.  Thus, if while sampling we change some transition that renders $c_{ij}=0$ for some values for each of $i$ and $j$, we can delete $\delta_{ij}$ until another transition is changed such that $c_{ij}$ becomes nonzero again, when we sample $\delta_{ij}$ anew.  Under the marginal joint distribution of a column of $\delta$ the row entries in that column are exchangeable, and so deleting an entry of $\delta$ has the same effect as marginalizing it out.  When all $\delta_{ij}$ for some state $q_i$ are marginalized out, we can say the state itself is marginalized out.
+%The conditional distribution of the other elements of $\delta_{i'j}, \; i'\neq i, 0\leq i'\leq|Q|-1$ conditioned on the model where superfluous transitions are marginalized out.  
+When we delete an element from a column of $\delta$, we replace the $|Q| - 1$ in the denominator of \eqref{delta:pred} with $D^+_j = \sum_{i=0}^{|Q|-1}I(v_{ij}\neq0)$, the number of entries in the $j$th column of $\delta$ that are {\em not} marginalized out yielding
+\begin{equation}
+P(\delta_{ij} = q_{i'}|\delta_{-ij},\alpha,\bmu) = \frac{\alpha\mu_{i'} + v_{i'j}}{\alpha + D^+_j }. \label{delta:pred_marg}
+\end{equation}
+If when sampling $\delta_{ij}$ it is assigned it a state $q_{i'}$ such that some $c_{i'j'}$ which was zero is now nonzero, we simply reinstantiate $\delta_{i'j'}$ by drawing from \eqref{delta:pred_marg} and update $ D^+_{j'}$.  When sampling a single $\delta_{ij}$ there can be many such transitions as the path through the machine dictated by $x_{0:T}$ may use many transitions in $\delta$ that were deleted.  In this case we update incrementally, increasing $D^+_j$ and $v_{ij}$ as we go.
+
+%The posterior for $\bmu$ up to a normalization constant is
+
+%\begin{eqnarray}
+%p(\bmu|\delta,\alpha,\gamma) & \propto & p(\bmu|\gamma) p(\delta|\bmu,\alpha)\nonumber \\
+%& = & \frac{\Gamma(\gamma)}{\Gamma(\frac{\gamma}{|Q|})^{|Q|}}(\mu_1\ldots\mu_{|Q|})^{\frac{\gamma}{|Q|}-1}\prod_{j=1}^{|\Sigma|} \frac{\Gamma(\alpha)}{\prod_{i=0}^{|Q|-1}\Gamma(\alpha\mu_i)} \frac{\prod_{i=0}^{|Q|-1} \Gamma(\alpha\mu_i + v_{ij})}{\Gamma(\alpha + D^+_j)}
+%\end{eqnarray}
+
+
+While it is possible to construct a Gibbs sampler using \eqref{delta:cond} in this collapsed representation, such a sampler requires a Monte Carlo integration over a potentially large subset of the marginalized-out transitions in $\delta$, which may be costly.  A simpler strategy is to pretend that all entries of $\delta$ exist but are sampled in a ``just-in-time'' manner.  
+%To avoid the problems arising from Monte Carlo approximations to this integral 
+This gives rise to a Metropolis Hastings (MH) sampler for $\delta$ where the proposed value for $\delta_{ij}$ is either one of the instantiated states or any one of the equivalent marginalized out states.   Any time any marginalized out element of $\delta$ is required we can pretend as if we had just sampled its value, and we know that because its value had no effect on the likelihood of the data, we know that it would have been sampled directly from \eqref{delta:pred_marg}.  It is in this sense that all marginalized out states are equivalent -- we known nothing more about their connectivity structure than that given by the prior in \eqref{delta:pred_marg}.
+
+  \comment{, resulting in an algorithm similar to Alg. 5 for Dirichlet process mixtures in \cite{Neal2000}. }
+\comment{ Consider the case where the edge being sampled, $\delta_{ij} = q_{i'}$, is the only one that goes to $q_{i'}$.  Removing this $\delta_{ij}$ from $\delta^T$ means that the conditional probability that $\delta_{ij} = q_{i'}$ given $\delta^T_{-ij}$ is very small: with no elements of $\delta^T_{-ij}$ going to $q_{i'}$, it is just another of the infinite unseen states, all of which are equivalent.  To avoid forgetting a good estimate of $\delta$, we perform Metropolis-Hastings (MH) sampling from the conditional rather than sampling directly.  This way there is always some chance of returning to the previous state of the model.}   For the MH sampler, denote the set of non-marginalized out $\delta$ entries $\delta^+ = \{ \delta_{ij} : c_{ij} > 0\}.$ We propose a new value $q_{i^*}$ for one $\delta_{ij}\in\delta^+$ according to \eqref{delta:pred_marg}.  The conditional posterior probability of this proposal is proportional to $p(x_{0:T}|\delta_{ij}=q_{i^*},\delta^+_{-ij})P(\delta_{ij} = q_{i^*}|\delta^+_{-ij})$.  The Hastings correction exactly cancels out the proposal probability in the accept/reject ratio leaving an MH accept probability for the $\delta_{ij}$ being set to $q_{i^*}$ given that its previous value was $q_{i'}$ of
+%
+\begin{equation}
+ \alpha(\delta_{ij}=q_{i^*} | \delta_{ij}=q_{i'}) =  \mathrm{min}\left(1,\frac{p(x_{0:T}|\delta_{ij}=q_{i^*},\delta_{-ij}^+)}{p(x_{0:T}|\delta_{ij}=q_{i'},\delta_{-ij}^+)}\right). \label{delta:mh}
+\end{equation}
+%
+Whether $q_{i^*}$ is marginalized out or not, evaluating $p(x_{0:T}|\delta_{ij}=q_{i^*},\delta_{-ij}^+)$ may require reinstantiating marginalized out elements of $\delta$.  As before, these values are sampled from \eqref{delta:pred_marg} on a just-in-time schedule.  If the new value is accepted, all $\delta_{ij} \in \delta^+$ for which $c_{ij} = 0$ are removed, and then move to the next transition in $\delta$ to sample.
+
+In the finite case, one can sample $\bmu$ by Metropolis-Hastings \comment{, for example using Dir($\eta\hat\bmu$) as the proposal, where $\hat\bmu$ is our current estimate and $\eta$ is a large concentration parameter,}or use a MAP estimate as in \cite{Mackay1995}.  Hyperparameters $\alpha$, $\beta$ and $\gamma$ can be sampled via Metropolis-Hastings updates.  In our experiments we use Gamma(1,1) hyperpriors.
+ 
+ \subsection{The Probabilistic Deterministic Infinite Automaton}
+ 
+We would like to avoid placing a strict upper bound on the number of states so that model complexity can grow with the amount of training data.  To see how to do this, consider what happens when $|Q|\rightarrow\infty$.   In this case, the right hand side of equations \eqref{gen:mu} and \eqref{gen:phi} must be replaced by infinite dimensional alternatives
+%
+\begin{eqnarray*}
+%\bmu &\sim& \mathrm{GEM}(\gamma) \footnote{$\bpi \sim \mathrm{GEM}(\alpha_0)$ means $\bpi$ is a random probability measure,  $\pi_k' \sim \mathrm{Beta}(1,\alpha_0)$ and $\pi_k =  \pi_k' \prod_{l=1}^{k-1}(1-\pi_l')$ }\\
+\bmu &\sim& \mathrm{PY}(\gamma,d_0,H)\\
+\bphi_j &\sim& \mathrm{PY}(\alpha, d, \bmu) \\
+\delta_{ij} &\sim& \bphi_j
+\end{eqnarray*}
+%  
+where $\mathrm{PY}$ stands for Pitman Yor process and $H$ in our case is a geometric distribution over the integers with parameter $\lambda$.   The resulting hierarchical model becomes the hierarchical Pitman-Yor process (HPYP) over a discrete alphabet \cite{Teh2006a}.  The discount parameters $d_0$ and $d$ are particular to the infinite case, and when both are zero the HPYP becomes the well known hierarchical Dirichlet process (HDP), which is the infinite dimensional limit of \eqref{gen:mu} and \eqref{gen:phi} \cite{Teh2006b}.
+Given a finite amount of data, there can only be nonzero counts for a finite number of state/symbol pairs, so our marginalization procedure from the finite case will yield a $\delta$ with at most $T$ elements.  Denote these non-marginalized out entries by $\delta^+$.  We can sample the elements of $\delta^+$ as before using \eqref{delta:mh} provided that we can propose from the HPYP.  In many HPYP sampler representations this is easy to do.  We use the Chinese restaurant franchise representation \cite{Teh2006b} in which the posterior predictive distribution of $\delta_{ij}$ given $\delta_{-ij}^+$ can be expressed with $\bphi_j$ and $\bmu$ integrated out as
+%
+\begin{equation}
+P(\delta_{ij} = q_{i'}|\delta_{-ij}^+,\alpha, \gamma) = \mathbb{E}\left[\frac{v_{i'j}-k_{i'j}d}{\alpha + D^+_j} + \frac{\alpha + k_{\cdot j}d}{\alpha + D^+_j}\left(\frac{w_{i'} - \kappa_{i'}d_0}{\gamma+w_\cdot} + \frac{\gamma + \kappa_{\cdot}d_0}{\gamma+w_\cdot}H(q_{i'})\right)\right] \label{delta:crf}
+\end{equation}
+%
+where $w_{i'}$, $k_{i'j}$, $\kappa_{i'}$, $w_\cdot = \sum_i w_i$, $k_{\cdot j} = \sum_i k_{ij}$, and $\kappa_{\cdot} = \sum_i \kappa_i$ are stochastic bookkeeping counts required by the Chinese Restaurant franchise sampler.  These counts must themselves be sampled  \cite{Teh2006b}.  The discount hyperparameters can also be sampled by Metropolis-Hastings.
+
+  \comment{
+ The predictive probability for a new $\delta_{ij} = q_{i'}$ given $\delta^T$ is given by $\frac{\alpha\mu_{i'} + v_{i'j}}{\alpha + D^+_j}$.  Note that this only depends on $|Q|$ through $\mu_{i'}$, which is well behaved as $|Q|$ grows.  In the limiting case, most of the mass of $\bmu$ will concentrate on a handful of elements, and $\bmu$ becomes a draw from a {\em Dirichlet process} (DP), which is commonly used as a prior in Bayesian models with infinite parameters.  The hierarchical Dirichlet construction given in \eqref{gen:mu} and \eqref{gen:phi} becomes a {\em hierarchical Dirichlet process} (HDP), where the $\bphi_j$ are draws from a Dirichlet process whose parameters are given by $\alpha$ and $\bmu$, which is itself a draw from a Dirichlet process.  An attractive property of HDPs is that both the $\bphi_j$ and $\bmu$ can be integrated out, which makes sampling more straightforward than in the finite case.  This  representation of the model, with all draws from a DP integrated out, is known as the {\em Chinese Restaurant Franchise} (CRF).  This curious name needs some explanation, which we happily provide.
+ 
+Consider each column of $\delta$ to be a restaurant with an infinite number of tables.  The individual $\delta_{ij}$ are customers, who upon entering the restaurant (i.e. when being sampled) must choose a table to sit at.  Each table serves one dish, which is the element of $Q$ that $\delta_{ij}$ maps to if it is seated at that table.  Multiple tables can serve the same dish, even in the same restaurant.  Let $w_{ij}$ be the table $\delta_{ij}$ sits at, let $n_{kj}$ be the number of customers sitting at table $k$ in restaurant $j$, and let $K^+_j$ be the total number of tables for which $n_{kj} \ne 0$.  Then a new $\delta_{ij}$ sits at table $k$ with probability proportional to $n_{kj}$ and sits at an unoccupied table $K^+_j + 1$ with probability proportional to $\alpha$:
+
+\begin{equation}
+ p(t_{ij} = k | w_{-ij}) = 
+ \begin{cases} 
+ \frac{n_{kj}}{\alpha + \sum_{k'=1}^{K^+_j}n_{k'j}} & \text{if } k < K^+_j \\
+ \frac{\alpha}{\alpha + \sum_{k'=1}^{K^+_j}n_{k'j}} & \text{if } k = K^+_j + 1\label{crf:low}
+ \end{cases}
+\end{equation}
+
+This sampling procedure is known as the Chinese Restaurant Process (CRP).  There is no notion of "dishes" in the CRP, and it is this extension that turns the CRP into the CRF.
+
+When we create a new table in the CRF, we must also assign a dish to it.  \comment{Consider {\em another} restaurant, where each table corresponds to a unique element of $Q$.  Every table in the regular restaurants is a customer in this high-level restaurant, and the dish served at each low-level table is the element of $Q$ on the high-level table where the low-level table sits.  Note that this means multiple low-level tables can serve the same dish, even within the same restaurant, while there is a {\em unique} high-level table with that dish.}  Let $m_i$ denote the number of tables across all restaurants serving the dish $q_i$, and $Q^+$ denote the number of unique elements of $Q$ for which $m_i \ne 0$.  If we seat a customer at a new table, assign $q_i$ to that table with probability proportional to $m_i$ and assign it a new element of $Q$ with probability proportional to $\gamma$:
+
+\begin{equation}
+p(\delta_{ij} = q_{i'} | \delta_{-ij}, w_{-ij}, w_{ij} = K^+_j + 1) = 
+\begin{cases}
+\frac{m_{i'}}{\gamma + \sum_{i'' = 1}^{Q^+} m_{i''} } & \text{if } q_{i'} < Q^+ \\
+\frac{\gamma}{\gamma + \sum_{i'' = 1}^{Q^+} m_{i''} } & \text{if } q_{i'} = Q^+ + 1\label{crf:high}
+\end{cases}
+\end{equation}
+
+This is {\em another} CRP, which comes as a result of integrating out $\bmu$, while the first CRP came from integrating out the $\bphi_j$.  When the number of observations grows large, the probability of sitting at a new table, and the probability of drawing a new dish given a new table, becomes small.  Thus a new $\delta_{ij}$ is most likely to be assigned to a state already seen in column $j$, then has some probability of being assigned to a state seen in another column but not in $j$, and then with small, but not zero, probability, will be assigned to a new state.  This coupling across multiple levels of generality is one of the attractive features of HDPs for machine learning.
+
+
+Having defined a prior over a transition matrix with an infinite number of rows, we can now generate a string from the probabilistic deterministic infinite automaton (PDIA).  First, draw $\bpi_0$ from \eqref{gen:pi} as before, and draw $\sigma_j|q_0 \sim \bpi_0$.  Draw $\delta_{0j}$ from the CRF, which for the first observation will always be seated at a new table with a new dish.  From there, if the current state $\q_t = q_i$ is a new one, draw $\bpi_{q_i}$, otherwise $\bpi_{q_i}$ is already known, and draw $x_t$ from $\bpi_{q_i}$.  If $(\q_t,x_t) \in \Delta^t$, the set of state/symbol pairs that have been visited by time $t$, $\q_{t+1} = \delta(\q_t,x_t)$, otherwise draw $\delta(\q_t,x_t)$ from the CRF given $\delta^t = \{\delta_{ij}|(q_i,\sigma_j)\in\Delta^t\}$ and let $\Delta^{t+1} = \Delta^t \cup (\q_t,x_t)$.
+
+
+
+The likelihood of a sequence $p(x_{0:T}|\delta^T)$ takes the same form as in the finite case \eqref{x:end}.  However, changing $\delta_{ij}$ may lead to the data visiting state/symbol pairs that are not in $\delta^T$, and we cannot evaluate the numerator of \eqref{delta:mh} exactly.  Instead we approximate it by sampling the missing elements of $\delta$ according to the CRF.  This can be seen as a single-sample Monte Carlo integration.  If we accept the new $\delta_{ij}$ we then delete all the $\delta_{i'j'}$ for which the counts $c_{i'j'} = 0$, while keeping any elements of $\delta$ we had to sample to evaluate the numerator of \eqref{delta:mh}.  In the terminology of the CRF, this reseats a customer at a new table.  We also resample the dish served at each table, otherwise mixing may be prohibitively slow.  We propose a new dish for the table $k$ in restaurant $j$ by sampling \eqref{crf:high} (with that table removed from the counts) and accept with probability \eqref{delta:mh}, with the individual $\delta_{ij}$ replaced by all $\delta_{ij}$ at table $k$, and add or remove elements of $\delta^T$ in the same way as when reseating customers.  For more on posterior sampling in the hierarchical Dirichlet process, we direct the reader to \cite{Teh2006b}.
+  }
+%We can sample incrementally from the joint distribution over $x_{0:T}$ and $\delta$ when $\phi_j$, $\mu$ and $\pi_i$ are integrated out in the $|Q|\rightarrow\infty$ limit.  From the start state $q_0$, we sample a symbol $s_{j_0}$ uniformly and assign $\delta_{0j_0}$ to a new state.  If $q^t = q_i$ then $x_t$ has the probability
+
+% \[P(x_t=s_j|q_i,x_{0:t-1},q^{0:t-1}) = \frac{c_{ij}+\frac{\beta}{|\Sigma|}}{c_{i\cdot} + \beta}\]
+ 
+% where $c_{ij}$ is the number of times so far $s_j$ was emitted from $q_i$ and $c_{i\cdot}$ is the total number of times $q_i$ has been visited so far.  
+ 
+%If the state/symbol pair $(q_i,s_j)$ has not been visited before, we have to sample $\delta_{ij}$.  The two-stage generative procedure for elements of $\delta$ means that we have to keep track of counts at two levels.  Each $\delta_{ij}$ belongs to a cluster $v_{kj}$ that contains other $\delta_{i'j}$, while each $v_{kj}$ belongs to a top-level cluster $w_{l}$ that has elements across all $j$.  Each top level cluster has one $q \in Q$ assigned to it, and $\delta_{ij}$ is equal to that $q$ in the top cluster that the cluster with $\delta_{ij}$ belongs to (*might want to make this part clearer...add a figure*).  Let $\delta^t$ denote the elements of $\delta$ that have been visited at time $t$.  as follows:
+ 
+%\[P(\delta_{ij} = k|\delta^t) \propto \begin{cases} & if $k \leq |\delta^t|$ \cr  & if $k > |\delta^t|$ \end{cases}\]
+ 
+% This process for sampling from an HDP when $\mu$ and $\phi_j$ are integrated out is known as the {\em Chinese Restaurant Franchise Process}.
