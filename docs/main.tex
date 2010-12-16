@@ -44,6 +44,7 @@ Columbia University, New York, NY 10027, USA \\
 \newcommand{\bphi}{\boldsymbol\phi}
 \newcommand{\bpi}{\boldsymbol\pi}
 \newcommand{\PY}{\textrm{PY}}
+\newcommand{\geom}{\textrm{geom}}
 
 \nipsfinalcopy
 
@@ -63,18 +64,43 @@ What could go wrong?
 
 \section{Model Definition}
 
-We begin by assuming that the parameters for $M$ Probabilistic
-Deterministic Finite Automata are sampled according to the following
-process:
+We begin by assuming that the parameters $\delta$ for $M$
+Probabilistic Deterministic Finite Automata (PDFA) are sampled
+according to the following process:
 \begin{equation}
+\theta_{m,\epsilon} \sim \PY(d^{\delta}_{0},\geom(q)); \quad
+\theta_{m,\sigma_j} \sim \PY(d^{\delta}_{|\sigma_j|},
+\theta_{m,\gamma(\sigma_j)}); \quad
+\delta_{m,\phi_i,\sigma_j} \sim \theta_{m,\sigma_j}.
+\end{equation}
+
+Shared across all of these PDFA is a set of (a countably infinite
+number of) emission distributions $\pi_{\phi_i}$ over binary
+vectors. Each of these distributions generates binary state vectors
+$z$ according to the following process:
+\begin{equation}
+\begin{split}
+\{r_{0,\sigma_j}, l_{0,\sigma_j}, s_{0,\sigma_j}\} &\sim \PY(d^\pi_{0}, 
+\{\frac{1-\beta}{2}, \frac{1-\beta}{2}, \beta\}); \\
+\{r_{\phi_i,\sigma_j}, l_{\phi_i,\sigma_j}, s_{\phi_i,\sigma_j}\} &\sim \PY(d^\pi_{1}, 
+\{r_{0,\sigma_j}, l_{0,\sigma_j}, s_{0,\sigma_j}\}); \\
+z_{t,0} &\sim \{r_{\phi_i, \epsilon}, l_{\phi_i, \epsilon}, 
+s_{\phi_i, \epsilon}\}
+\end{split}
+\end{equation}
+
+Having sampled $\delta$, latent binary state vectors $z_t$ are sampled
+for each time $t$ according to the following process:
+\begin{equation}
+xxx
 \end{equation}
 
 Conditioned on the latent binary state vector $z_t$ for time $t$, we
 draw word $w_t$ according to a hierarchical Pitman-Yor process:
 \begin{equation}
 \begin{split}
-G_{\epsilon} \sim \PY(H); \quad
-G_z \sim \PY(G_{\gamma(z)}); \quad
+G_{\epsilon} \sim \PY(d^G_{0},H); \quad
+G_z \sim \PY(d^G_{|z|},G_{\gamma(z)}); \quad
 w_t \sim G_{z_t}.
 \end{split}
 \end{equation}
