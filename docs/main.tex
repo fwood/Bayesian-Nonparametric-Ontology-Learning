@@ -63,16 +63,30 @@ Learning rules.
 What could go wrong?
 
 \section{Model Definition}
+We assume that at each time $t$, a binary vector $z_t$ is drawn
+according to a process that will be defined below. Conditioned on this
+vector $z_t$, a corresponding word $w_t$ is drawn according to a
+hierarchical Pitman-Yor process
 
 We begin by assuming that the parameters $\delta$ for $M$
-Probabilistic Deterministic Finite Automata (PDFA) are sampled
-according to the following process:
+Deterministic Infinite Automata (DIA) are sampled according to the
+following process:
 \begin{equation}
 \theta_{m,\epsilon} \sim \PY(d^{\delta}_{0},\geom(q)); \quad
 \theta_{m,\sigma_j} \sim \PY(d^{\delta}_{|\sigma_j|},
 \theta_{m,\gamma(\sigma_j)}); \quad
 \delta_{m,\phi_i,\sigma_j} \sim \theta_{m,\sigma_j}.
 \end{equation}
+Given a sequence $z_{1:V}$ of binary vectors, the DIA defined by
+$\delta_m$ produces the following sequence of states $\phi_{1:V}$:
+\begin{equation}
+\phi_0 = 0; \phi_i = \delta_{m, \phi_{i-1}, z_i}.
+\end{equation}
+
+%%  Each automaton $m$
+%% defines a deterministic function that maps from input streams of
+%% binary vectors $\sigma$ to an output state $\phi$.
+
 
 Shared across all of these PDFA is a set of (a countably infinite
 number of) emission distributions $\pi_{\phi_i}$ over binary
@@ -84,16 +98,27 @@ $z$ according to the following process:
 \{\frac{1-\beta}{2}, \frac{1-\beta}{2}, \beta\}); \\
 \{r_{\phi_i,\sigma_j}, l_{\phi_i,\sigma_j}, s_{\phi_i,\sigma_j}\} &\sim \PY(d^\pi_{1}, 
 \{r_{0,\sigma_j}, l_{0,\sigma_j}, s_{0,\sigma_j}\}); \\
-z_{t,0} &\sim \{r_{\phi_i, \epsilon}, l_{\phi_i, \epsilon}, 
-s_{\phi_i, \epsilon}\}
+z_{t,0} &\sim \{r_{\phi_t, \epsilon}, l_{\phi_t, \epsilon}, 
+s_{\phi_t, \epsilon}\}; \\
+z_{t,b} &\sim \{r_{\phi_t, z_{t,1:b-1}}, l_{\phi_t, z_{t,1:b-1}}, 
+s_{\phi_t, z_{t,1:b-1}}\}.
 \end{split}
 \end{equation}
+We denote the probability of generating a binary $z$ vector under
+one of these emission distributions as $\pi_{\phi_i}(z)$.
 
-Having sampled $\delta$, latent binary state vectors $z_t$ are sampled
-for each time $t$ according to the following process:
-\begin{equation}
-xxx
-\end{equation}
+%% Having sampled $\delta$, latent binary state vectors $z_t$ are sampled
+%% for each time $t$ according to the following process:
+%% \begin{equation}
+%% p(\phi_{t,1:V} | z_{t-V:t-1}) \propto
+%% \prod_{i=0}^{V-1}\mathbb{I}[\delta_{m_t, \phi_{t, i}, z_{t-V+i}}=\phi_{t,i+1}]
+%% \pi_{\phi_{t,i}}(z_{t-V+i}); \quad
+%% p(z_t | \phi_{t,V}) = \pi_{\phi_{t, V}}(z_t).
+%% \end{equation}
+%% In English, we first sample a sequence $\phi_{t, 1:V}$ from the
+%% posterior predictive distribution of PDFA $m_t$ conditioned on
+%% $z_{t-V:t-1}$, then draw $z_t$ from the distribution $\pi_{\phi_{t,
+%%     V}}$ associated with state $\phi_{t, V}$.
 
 Conditioned on the latent binary state vector $z_t$ for time $t$, we
 draw word $w_t$ according to a hierarchical Pitman-Yor process:
