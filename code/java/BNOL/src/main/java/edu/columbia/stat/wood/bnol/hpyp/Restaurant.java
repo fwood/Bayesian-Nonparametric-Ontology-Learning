@@ -5,7 +5,12 @@
 
 package edu.columbia.stat.wood.bnol.hpyp;
 
+import edu.columbia.stat.wood.bnol.util.MersenneTwisterFast;
+import edu.columbia.stat.wood.bnol.util.MutableDouble;
+import edu.columbia.stat.wood.bnol.util.Pair;
+import edu.columbia.stat.wood.bnol.util.SampleWithoutReplacement;
 import gnu.trove.iterator.TIntObjectIterator;
+import gnu.trove.map.hash.THashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import java.util.Arrays;
 
@@ -14,7 +19,7 @@ import java.util.Arrays;
  * @author nicholasbartlett
  */
 
-public class Restaurant extends Pair<Restaurant, Restaurant> {
+public class Restaurant<F> extends THashMap<F,Restaurant> {
 
     /**
      * total number of customers and tables in the restaurant
@@ -24,7 +29,7 @@ public class Restaurant extends Pair<Restaurant, Restaurant> {
     /**
      * parent of restaurant
      */
-    private Restaurant parent;
+    private Restaurant<F> parent;
 
     /**
      * concentration and discount parameters for this restaurant
@@ -43,7 +48,7 @@ public class Restaurant extends Pair<Restaurant, Restaurant> {
      * @param concentration concentration parameter
      * @param discount discount parameter
      */
-    public Restaurant(Restaurant parent, MutableDouble concentration, MutableDouble discount){
+    public Restaurant(Restaurant<F> parent, MutableDouble concentration, MutableDouble discount){
         this.parent = parent;
         this.concentration = concentration;
         this.discount = discount;
@@ -57,43 +62,6 @@ public class Restaurant extends Pair<Restaurant, Restaurant> {
      * Null constructor
      */
     public Restaurant(){}
-
-    public Restaurant get(byte key){
-        if(key == 1){
-            return this.second();
-        } else {
-            return this.first();
-        }
-    }
-
-    public void put(byte key, Restaurant r){
-        if(key == 1){
-            this.setSecond(r);
-        } else{
-            this.setFirst(r);
-        }
-    }
-
-    public boolean isEmpty(){
-        return this.first() == null && this.second() == null;
-    }
-
-    public Restaurant[] values(){
-        Restaurant r1 = null, r2 = null;
-        if(r1 != null && r2 != null){
-            return new Restaurant[]{r1,r2};
-        } else {
-            if(r1 != null){
-                return new Restaurant[]{r1};
-            } else {
-                if(r2 != null){
-                    return new Restaurant[]{r2};
-                } else {
-                    return null;
-                }
-            }
-        }
-    }
 
     /**
      * Gets the total number of customers

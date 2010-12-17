@@ -5,6 +5,10 @@
 
 package edu.columbia.stat.wood.bnol.hpyp;
 
+import edu.columbia.stat.wood.bnol.util.IntDiscreteDistribution;
+import edu.columbia.stat.wood.bnol.util.MersenneTwisterFast;
+import edu.columbia.stat.wood.bnol.util.MutableInt;
+import edu.columbia.stat.wood.bnol.util.Pair;
 import gnu.trove.iterator.TIntObjectIterator;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import java.util.Iterator;

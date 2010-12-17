@@ -3,7 +3,7 @@
  * and open the template in the editor.
  */
 
-package edu.columbia.stat.wood.bnol.hpyp;
+package edu.columbia.stat.wood.bnol.util;
 
 /**
  * Container class for double which can be set and manipulated.

@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package edu.columbia.stat.wood.bnol.hpyp;
+package edu.columbia.stat.wood.bnol.util;
 
 /**
  * Class to provide static method to return a random ordering of the integers 0 - (n-1).
