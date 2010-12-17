@@ -44,7 +44,8 @@ Columbia University, New York, NY 10027, USA \\
 \newcommand{\bphi}{\boldsymbol\phi}
 \newcommand{\bpi}{\boldsymbol\pi}
 \newcommand{\PY}{\textrm{PY}}
-\newcommand{\geom}{\textrm{geom}}
+\newcommand{\geom}{\textrm{Geom}}
+\newcommand{\unif}{\textrm{Unif}}
 
 \nipsfinalcopy
 
@@ -63,72 +64,88 @@ Learning rules.
 What could go wrong?
 
 \section{Model Definition}
-We assume that at each time $t$, a binary vector $z_t$ is drawn
-according to a process that will be defined below. Conditioned on this
-vector $z_t$, a corresponding word $w_t$ is drawn according to a
-hierarchical Pitman-Yor process
+%% For each word $x_t$, we assume that there is a corresponding binary
+%% vector $s_t \in \mathcal{S} \equiv \{0, 1\}^*$.
 
-We begin by assuming that the parameters $\delta$ for $M$
-Deterministic Infinite Automata (DIA) are sampled according to the
-following process:
+%% We assume that at each time $t$, a binary vector $z_t$ is drawn
+%% according to a process that will be defined below. Conditioned on this
+%% vector $z_t$, a corresponding word $w_t$ is drawn according to a
+%% hierarchical Pitman-Yor process
+
+At each time step $t$, a Deterministic Infinite Automaton (DIA) $m_t
+\in \mathcal{M}$ is chosen according to a Markov process:
 \begin{equation}
-\theta_{m,\epsilon} \sim \PY(d^{\delta}_{0},\geom(q)); \quad
-\theta_{m,\sigma_j} \sim \PY(d^{\delta}_{|\sigma_j|},
-\theta_{m,\gamma(\sigma_j)}); \quad
-\delta_{m,\phi_i,\sigma_j} \sim \theta_{m,\sigma_j}.
-\end{equation}
-Given a sequence $z_{1:V}$ of binary vectors, the DIA defined by
-$\delta_m$ produces the following sequence of states $\phi_{1:V}$:
-\begin{equation}
-\phi_0 = 0; \phi_i = \delta_{m, \phi_{i-1}, z_i}.
+J_\mu \sim \PY(1, 1, \unif(\mathcal{M}));\quad
+m_t \sim J_{m_{t-1}}.
 \end{equation}
 
-%%  Each automaton $m$
-%% defines a deterministic function that maps from input streams of
-%% binary vectors $\sigma$ to an output state $\phi$.
+For each Deterministic Infinite Automaton (DIA) $\mu \in \mathcal{M}
+\equiv \{1,\ldots,M\}$, we assume that the parameters $\delta_\mu$
+associated with that that DIA are sampled according to the following
+process:
+\begin{equation}
+\theta_{\mu,\epsilon} \sim \PY(c^{\delta}, d^{\delta}_{0},\geom(q)); \quad
+\theta_{\mu,\sigma} \sim \PY(c^{\delta}, d^{\delta}_{|\sigma|},
+\theta_{\mu,\gamma(\sigma)}); \quad
+\delta_{\mu,\zeta,\sigma} \sim \theta_{\mu,\sigma}.
+\end{equation}
+$\gamma(\sigma)$ is an operator that removes the least significant bit
+in the binary vector $\sigma$; for example, $\gamma(011001)=01100$.
 
-
-Shared across all of these PDFA is a set of (a countably infinite
-number of) emission distributions $\pi_{\phi_i}$ over binary
-vectors. Each of these distributions generates binary state vectors
-$z$ according to the following process:
+Given a sequence of the $H$ binary vectors $s_{t-H:t-1}$ preceding
+time $t$, the DIA $m_t$ generates a sequence of states $z_{t,-H:0}$
+according to the following deterministic program:
+\begin{equation}
+z_{t,-H} = 0; \quad
+\textrm{for } h \in \{-H+1,\ldots,0\}, z_{t,h} = \delta_{m_t, z_{t,h-1}, s_{t+h}}.
+\end{equation}
+Shared across all of these DIA is a set of (a countably infinite
+number of) emission distributions $\pi_{\zeta}$ over binary
+vectors. Each $\pi_{\zeta}$ is defined by a set of $r, l,$ and $s$
+variables drawn from a Pitman-Yor process:
 \begin{equation}
 \begin{split}
-\{r_{0,\sigma_j}, l_{0,\sigma_j}, s_{0,\sigma_j}\} &\sim \PY(d^\pi_{0}, 
+\{r_{0,\sigma}, l_{0,\sigma}, u_{0,\sigma}\} &\sim \PY(c_0^\pi, d^\pi_{0}, 
 \{\frac{1-\beta}{2}, \frac{1-\beta}{2}, \beta\}); \\
-\{r_{\phi_i,\sigma_j}, l_{\phi_i,\sigma_j}, s_{\phi_i,\sigma_j}\} &\sim \PY(d^\pi_{1}, 
-\{r_{0,\sigma_j}, l_{0,\sigma_j}, s_{0,\sigma_j}\}); \\
-z_{t,0} &\sim \{r_{\phi_t, \epsilon}, l_{\phi_t, \epsilon}, 
-s_{\phi_t, \epsilon}\}; \\
-z_{t,b} &\sim \{r_{\phi_t, z_{t,1:b-1}}, l_{\phi_t, z_{t,1:b-1}}, 
-s_{\phi_t, z_{t,1:b-1}}\}.
+\{r_{\zeta,\sigma}, l_{\zeta,\sigma}, u_{\zeta,\sigma}\} &\sim 
+\PY(c_1^\pi, d^\pi_{1}, \{r_{0,\sigma}, l_{0,\sigma}, u_{0,\sigma}\}).
 \end{split}
 \end{equation}
-We denote the probability of generating a binary $z$ vector under
-one of these emission distributions as $\pi_{\phi_i}(z)$.
-
-%% Having sampled $\delta$, latent binary state vectors $z_t$ are sampled
-%% for each time $t$ according to the following process:
+Given $r, l,$ and $s$, each of these distributions generates binary
+state vectors $\sigma$ according to the following process:
+\begin{enumerate}
+\item Initialize $\sigma$ to the empty vector $\epsilon$.
+\item Until the process is stopped:
+  \begin{enumerate}
+  \item Either append a 1 to $\sigma$ (with probability $r_{z_{t,0}, \sigma}$),
+    append a 0 to $\sigma$ (with probability $l_{z_{t,0}, \sigma}$), or
+    stop the process (with probability $u_{z_{t,0},\sigma}$).
+  \end{enumerate}
+\end{enumerate}
 %% \begin{equation}
-%% p(\phi_{t,1:V} | z_{t-V:t-1}) \propto
-%% \prod_{i=0}^{V-1}\mathbb{I}[\delta_{m_t, \phi_{t, i}, z_{t-V+i}}=\phi_{t,i+1}]
-%% \pi_{\phi_{t,i}}(z_{t-V+i}); \quad
-%% p(z_t | \phi_{t,V}) = \pi_{\phi_{t, V}}(z_t).
+%% \begin{split}
+%% s_{t,0} &\sim \{r_{z_{t,0}, \epsilon}, l_{z_{t,0}, \epsilon}, 
+%% s_{z_{t,0}, \epsilon}\}; \\
+%% s_{t,b} &\sim \{r_{z_{t,0}, s_{t,1:b-1}}, l_{z_{t,0}, s_{t,1:b-1}}, 
+%% s_{z_{t,0}, s_{t,1:b-1}}\}
+%% \end{split}
 %% \end{equation}
-%% In English, we first sample a sequence $\phi_{t, 1:V}$ from the
-%% posterior predictive distribution of PDFA $m_t$ conditioned on
-%% $z_{t-V:t-1}$, then draw $z_t$ from the distribution $\pi_{\phi_{t,
-%%     V}}$ associated with state $\phi_{t, V}$.
-
-Conditioned on the latent binary state vector $z_t$ for time $t$, we
+We denote the probability of generating a particular binary vector
+$\sigma$ under the emission distribution indexed by $\zeta$ as
+$\pi_{\zeta}(\sigma)$. Thus, we can write
+\begin{equation}
+s_t \sim \pi_{z_{t,0}}.
+\end{equation}
+Conditioned on the latent binary state vector $s_t$ for time $t$, we
 draw word $w_t$ according to a hierarchical Pitman-Yor process:
 \begin{equation}
 \begin{split}
-G_{\epsilon} \sim \PY(d^G_{0},H); \quad
-G_z \sim \PY(d^G_{|z|},G_{\gamma(z)}); \quad
+G_{\epsilon} \sim \PY(c^G, d^G_{0},\unif(1,\ldots,W)); \quad
+G_z \sim \PY(c^G, d^G_{|z|},G_{\gamma(z)}); \quad
 w_t \sim G_{z_t}.
 \end{split}
 \end{equation}
+$W$ is the size of the vocabulary.
 
 
 %% \input{abstract}
