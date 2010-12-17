@@ -93,6 +93,10 @@ public class HPYP<F> {
         }
     }
 
+    public double probability(F[] context, int type){
+        return get(context).probability(type);
+    }
+
     public void unseat(F[] context, int type){
         get(context).unseat(type,RNG);
     }
