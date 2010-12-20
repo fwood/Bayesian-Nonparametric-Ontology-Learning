@@ -28,9 +28,9 @@ public class StateFactory {
         baseNode = new Node(baseDist);
     }
     
-    public double logProbability(byte[] s, Machine m){
+    public double logProbability(byte[] s, Integer phi){
         double ll = 0.0;
-        Machine[] context = new Machine[]{m};
+        Integer[] context = new Integer[]{phi};
 
         Node currentNode = baseNode;
         for(int i = 0; i < s.length; i++){
@@ -53,14 +53,14 @@ public class StateFactory {
         return ll;
     }
 
-    public byte[] generate(Machine m){
+    public byte[] generate(Integer phi){
         TByteArrayList out = new TByteArrayList();
         byte key;
         Node currentNode = baseNode;
-        Machine[] machineKey = new Machine[]{m};
+        Integer[] machineState = new Integer[]{phi};
 
         while(true){
-            key = (byte) currentNode.generate(machineKey);
+            key = (byte) currentNode.generate(machineState);
 
             if(key == 2){
                 break;
@@ -73,14 +73,19 @@ public class StateFactory {
         return out.toArray();
     }
 
-    public byte[] draw(Machine m){
+    public byte[] generate(Machine m, double low, double high){
+        
+        return null;
+    }
+
+    public byte[] draw(Integer phi, boolean buffer){
         TByteArrayList out = new TByteArrayList();
         byte key;
         Node currentNode = baseNode;
-        Machine[] machineKey = new Machine[]{m};
+        Integer[] machineState = new Integer[]{phi};
 
         while(true){
-            key = (byte) currentNode.draw(machineKey);
+            key = (byte) currentNode.draw(machineState, buffer);
 
             if(key == 2){
                 break;
@@ -93,7 +98,8 @@ public class StateFactory {
         return out.toArray();
     }
 
-    private class Node extends HPYP<Machine> {
+    
+    private class Node extends HPYP<Integer> {
         private Pair<Node,Node> children = new Pair<Node,Node>();
 
         public Node(IntTreeDiscreteDistribution baseDist){

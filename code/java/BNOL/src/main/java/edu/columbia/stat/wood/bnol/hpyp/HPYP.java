@@ -8,6 +8,8 @@ import edu.columbia.stat.wood.bnol.util.IntDiscreteDistribution;
 import edu.columbia.stat.wood.bnol.util.IntUniformDiscreteDistribution;
 import edu.columbia.stat.wood.bnol.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.bnol.util.MutableDouble;
+import edu.columbia.stat.wood.bnol.util.Pair;
+import java.util.ArrayList;
 
 /**
  *
@@ -19,6 +21,8 @@ public class HPYP<F> {
     private Restaurant<F> ecr, root;
     private MutableDouble[] discounts;
     private MutableDouble[] concentrations;
+    private ArrayList<Pair<F[],Integer>> seatBuffer = new ArrayList<Pair<F[],Integer>>();
+    private ArrayList<Pair<F[],Integer>> unseatBuffer = new ArrayList<Pair<F[],Integer>>();
 
     public HPYP(int depth, MutableDouble[] discounts, MutableDouble[] concentrations, IntDiscreteDistribution baseDist) {
         if (depth < 0) {
@@ -53,8 +57,12 @@ public class HPYP<F> {
         RNG = new MersenneTwisterFast(3);
     }
 
-    public int draw(F[] context){
-        return get(context).draw(RNG);
+    public int draw(F[] context, boolean buffer){
+        int type = get(context).draw(RNG);
+        if(buffer){
+            seatBuffer.add(new Pair<F[],Integer>(context, type));
+        }
+        return type;
     }
 
     public int generate(F[] context){
@@ -101,12 +109,40 @@ public class HPYP<F> {
         return get(context).probability(type);
     }
 
-    public void unseat(F[] context, int type){
+    /*
+    public double[] probability(F[] context){
+        return null;
+    }*/
+
+    public void unseat(F[] context, int type, boolean buffer){
         get(context).unseat(type,RNG);
+        if(buffer){
+            unseatBuffer.add(new Pair<F[],Integer>(context, type));
+        }
     }
 
-    public void seat(F[] context, int type){
+    public void seat(F[] context, int type, boolean buffer){
         get(context).seat(type,RNG);
+        if(buffer){
+            seatBuffer.add(new Pair<F[],Integer>(context, type));
+        }
+    }
+
+    public void commit(){
+        seatBuffer = new ArrayList<Pair<F[],Integer>>();
+        unseatBuffer = new ArrayList<Pair<F[],Integer>>();
+    }
+
+    public void rollback(){
+        for(Pair<F[],Integer> pair : seatBuffer){
+            unseat(pair.first(),pair.second(), false);
+        }
+        seatBuffer = new ArrayList<Pair<F[],Integer>>();
+
+        for(Pair<F[],Integer> pair : unseatBuffer){
+            seat(pair.first(), pair.second(), false);
+        }
+        unseatBuffer = new ArrayList<Pair<F[],Integer>>();
     }
 
     private boolean checkCounts(Restaurant<F> r) {
