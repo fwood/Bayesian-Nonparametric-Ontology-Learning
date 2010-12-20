@@ -80,6 +80,20 @@ public class RootRestaurant extends Restaurant {
     }
 
     @Override
+    public int generate(MersenneTwisterFast rng){
+        Iterator<Pair<Integer, Double>> iterator = baseDistribution.iterator();
+        double cuSum = 0.0, r = rng.nextDouble();
+        Pair<Integer,Double> e;
+        while(true){
+            e = iterator.next();
+            cuSum += e.second();
+            if(cuSum > r){
+                return e.first();
+            }
+        }
+    }
+
+    @Override
     public void sampleSeatingArrangements(MersenneTwisterFast rng){}
 
     @Override

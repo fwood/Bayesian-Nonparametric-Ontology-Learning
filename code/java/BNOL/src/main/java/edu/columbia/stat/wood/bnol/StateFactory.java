@@ -6,10 +6,9 @@
 package edu.columbia.stat.wood.bnol;
 
 import edu.columbia.stat.wood.bnol.hpyp.HPYP;
-import edu.columbia.stat.wood.bnol.util.IntArrayDiscreteDistribution;
-import edu.columbia.stat.wood.bnol.util.IntGeometricDistribution;
 import edu.columbia.stat.wood.bnol.util.MutableDouble;
 import edu.columbia.stat.wood.bnol.util.Pair;
+import gnu.trove.list.array.TByteArrayList;
 
 /**
  *
@@ -19,14 +18,14 @@ import edu.columbia.stat.wood.bnol.util.Pair;
 public class StateFactory {
 
     private Node baseNode;
-    private double b;
+    private IntTreeDiscreteDistribution baseDist;
 
-    public StateFactory(double b){
-        baseNode = new Node(b);
-        if(b > 1.0 || b < 0.0){
+    public StateFactory(MutableDouble b){
+        if(b.value() > 1.0 || b.value() < 0.0){
             throw new IllegalArgumentException("b must be in 0 - 1");
         }
-        this.b = b;
+        baseDist = new IntTreeDiscreteDistribution(b);
+        baseNode = new Node(baseDist);
     }
     
     public double logProbability(byte[] s, Machine m){
@@ -39,7 +38,7 @@ public class StateFactory {
             currentNode = currentNode.get(s[i]);
             if(currentNode == null){
                 for(int j = i+1; j < s.length; j++){
-                    ll += Math.log((1 - b) / 2);
+                    ll += Math.log(baseDist.probability(0));
                 }
                 break;
             }
@@ -48,31 +47,69 @@ public class StateFactory {
         if(currentNode != null){
             ll += Math.log(currentNode.probability(context, 2));
         } else {
-            ll += Math.log(b);
+            ll += Math.log(baseDist.probability(2));
         }
         
         return ll;
     }
 
     public byte[] generate(Machine m){
-        
+        TByteArrayList out = new TByteArrayList();
+        byte key;
+        Node currentNode = baseNode;
+        Machine[] machineKey = new Machine[]{m};
 
+        while(true){
+            key = (byte) currentNode.generate(machineKey);
 
+            if(key == 2){
+                break;
+            }
+            
+            out.add(key);
+            currentNode = currentNode.get(key);
+        }
 
-        return null;
+        return out.toArray();
+    }
+
+    public byte[] draw(Machine m){
+        TByteArrayList out = new TByteArrayList();
+        byte key;
+        Node currentNode = baseNode;
+        Machine[] machineKey = new Machine[]{m};
+
+        while(true){
+            key = (byte) currentNode.draw(machineKey);
+
+            if(key == 2){
+                break;
+            }
+
+            out.add(key);
+            currentNode = currentNode.get(key);
+        }
+
+        return out.toArray();
     }
 
     private class Node extends HPYP<Machine> {
         private Pair<Node,Node> children = new Pair<Node,Node>();
 
-        public Node(double b){
-            super(1, new MutableDouble[]{new MutableDouble(1),new MutableDouble(1)}, new MutableDouble[]{new MutableDouble(1),new MutableDouble(1)}, new IntArrayDiscreteDistribution(new double[]{(1-b)/2, (1-b)/2,b}));
+        public Node(IntTreeDiscreteDistribution baseDist){
+            super(1, new MutableDouble[]{new MutableDouble(1),new MutableDouble(1)}, new MutableDouble[]{new MutableDouble(1),new MutableDouble(1)}, baseDist);
         }
 
         public Node get(byte key){
             if(key == 0){
+                if(children.first() == null){
+                    children.setFirst(new Node(baseDist));
+                }
                 return children.first();
             } else if (key == 1){
+                if(children.second() == null){
+                    children.setSecond(new Node(baseDist));
+                }
                 return children.second();
             } else {
                 throw new IllegalArgumentException("key must be 0 or 1");

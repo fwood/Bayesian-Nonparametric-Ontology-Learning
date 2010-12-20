@@ -57,6 +57,10 @@ public class HPYP<F> {
         return get(context).draw(RNG);
     }
 
+    public int generate(F[] context){
+        return get(context).generate(RNG);
+    }
+
     public Restaurant<F> get(F[] context) {
         if (context == null || context.length == 0) {
             return ecr;
