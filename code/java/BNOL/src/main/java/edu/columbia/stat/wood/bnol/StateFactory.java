@@ -55,6 +55,10 @@ public class StateFactory {
     }
 
     public byte[] generate(Machine m){
+        
+
+
+
         return null;
     }
 
