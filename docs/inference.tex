@@ -1,9 +1,35 @@
  \section{Posterior Inference over PDFAs}
  
- We perform posterior inference by sampling assignments for $\delta_{ij}$ individually.  Rather than ordinary Gibbs sampling, we use a mixed Gibbs/Metropolis-Hastings update.  To see why, consider the following case:  $\delta_{ij}$ is the only sampled element of $\delta$ that is assigned to the state $q_{i'}$.  When we removed $\delta_{ij}$ from the counts to sample it, the probability of assigning it back to $q_{i'}$ becomes zero, and even if it is assigned to some new state $q_{i''}$, the probability that $\delta_{i'j} = \delta_{i''j}$ for all $j$ visited by the data is low.  We do not want to forget a good sample, so instead we propose a new $\delta_{ij}$ and accept or reject according to the usual Metropolis-Hastings ratio.
+ We   perform  posterior   inference  by   sampling   assignments  for
+ $\delta_{ij}$ individually.  Rather  than ordinary Gibbs sampling, we
+ use a  mixed Gibbs/Metropolis-Hastings update.  To  see why, consider
+ the  following case:  $\delta_{ij}$ is  the only  sampled  element of
+ $\delta$ that  is assigned  to the state  $q_{i'}$.  When  we removed
+ $\delta_{ij}$  from  the counts  to  sample  it,  the probability  of
+ assigning  it  back to  $q_{i'}$  becomes zero,  and  even  if it  is
+ assigned  to   some  new   state  $q_{i''}$,  the   probability  that
+ $\delta_{i'j} =  \delta_{i''j}$ for  all $j$ visited  by the  data is
+ low.  We do not want to forget a good sample, so instead we propose a
+ new  $\delta_{ij}$  and  accept  or  reject according  to  the  usual
+ Metropolis-Hastings ratio.
  
-Samples from the CRF are exchangeable, so we can remove $\delta_{ij}$ and propose a sample $\delta{ij}^*$ according to the CRF given $\delta_{-ij}^T$, the elements of $\delta$ visited by $x_{0:T}$ excluding $\delta_{ij}$.  This is the prior probability excluding the data, which cancels with the equivalent term in the posterior, meaning that the accept probability $\alpha(\delta_{ij},\delta_{ij}^*)$ is given by the ratio of the likelihood of the data
+Samples from the CRF are exchangeable, so we can remove $\delta_{ij}$
+and propose a sample $\delta{ij}^*$ according to the CRF given
+$\delta_{-ij}^T$, the elements of $\delta$ visited by $x_{0:T}$
+excluding $\delta_{ij}$.  This is the prior probability excluding the
+data, which cancels with the equivalent term in the posterior, meaning
+that the accept probability $\alpha(\delta_{ij},\delta_{ij}^*)$ is
+given by the ratio of the likelihood of the data
 
 \[ \alpha(\delta_{ij},\delta_{ij}^*) =  \mathrm{min}\left(1,\frac{p(x_{0:T}|\delta_{ij}^*,\delta_{-ij}^T)}{p(x_{0:T}|\delta_{ij},\delta_{-ij}^T)}\right)\]
 
-In general the numerator cannot be evaluated because changing $\delta_{ij}$ means changing the entire sequence of states visited by the data after $\delta_{ij}$ is first visited.  In practice we estimate the numerator by Monte Carlo approximation, sampling elements of $\delta$ according to the CRF as they are first visited by the data.  Changing one element of $\delta$ means many already-sampled state/symbol pairs may never be visited by the data, and have no effect on the likelihood.  The posterior probability of any value for these elements of $\delta$ is the same as the prior, and therefore we may remove them from $\delta^T$ after accepting a new $\delta_{ij}$.
+In general the numerator cannot be evaluated because changing
+$\delta_{ij}$ means changing the entire sequence of states visited by
+the data after $\delta_{ij}$ is first visited.  In practice we
+estimate the numerator by Monte Carlo approximation, sampling elements
+of $\delta$ according to the CRF as they are first visited by the
+data.  Changing one element of $\delta$ means many already-sampled
+state/symbol pairs may never be visited by the data, and have no
+effect on the likelihood.  The posterior probability of any value for
+these elements of $\delta$ is the same as the prior, and therefore we
+may remove them from $\delta^T$ after accepting a new $\delta_{ij}$.

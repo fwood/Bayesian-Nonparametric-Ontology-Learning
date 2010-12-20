@@ -46,6 +46,7 @@ Columbia University, New York, NY 10027, USA \\
 \newcommand{\PY}{\textrm{PY}}
 \newcommand{\geom}{\textrm{Geom}}
 \newcommand{\unif}{\textrm{Unif}}
+\newcommand{\perplexity}{\textrm{perp}}
 
 \nipsfinalcopy
 
@@ -57,6 +58,13 @@ Columbia University, New York, NY 10027, USA \\
 \input{introduction}
 
 \section{Model Definition}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=1\textwidth]{figures/graphicalmodel}
+\caption{Graphical model. \label{fig:graphicalmodel}}
+\end{figure}
+
 %% For each word $x_t$, we assume that there is a corresponding binary
 %% vector $s_t \in \mathcal{S} \equiv \{0, 1\}^*$.
 
@@ -134,12 +142,57 @@ draw word $w_t$ according to a hierarchical Pitman-Yor process:
 \begin{equation}
 \begin{split}
 G_{\epsilon} \sim \PY(c^G, d^G_{0},\unif(1,\ldots,W)); \quad
-G_z \sim \PY(c^G, d^G_{|z|},G_{\gamma(z)}); \quad
-w_t \sim G_{z_t}.
+G_\sigma \sim \PY(c^G, d^G_{|\sigma|},G_{\gamma(\sigma)}); \quad
+w_t \sim G_{s_t}.
 \end{split}
 \end{equation}
 $W$ is the size of the vocabulary.
 
+
+\section{Experiments}
+
+We ran several experiments to evaluate BNOL's usefulness for analyzing
+text documents. In the first experiment, we tested BNOL's ability to
+recover structure from a synthetic dataset. In the second experiment,
+we evaluated the quality of the ontologies discovered by
+BNOL. Finally, we evaluated BNOL's ability to accurately predict the
+next entry in a stream of text.
+
+\subsection{Synthetic Data}
+We created a simple artificial ontology (displayed in figure
+\ref{fig:fakeontology}) and generated some text using it. [Insert
+  actual fake generative process here.] We then ran the MCMC algorithm
+described in section \ref{sec:inference} on the synthetic document.
+The ontology discovered by BNOL is shown in figure
+\ref{fig:bnolsynth}. The algorithm has done a good job of recovering
+the ontological structure in the synthetic dataset.
+
+\subsection{Evaluating Ontologies}
+To evaluate the quality of the ontologies discovered by BNOL on real
+datasets, we analyzed the XXX corpus using the inference algorithm in
+section \ref{sec:inference}. The ontology found by the model is shown
+in figure \ref{fig:realontology}. [Discussion of the qualitative
+  desiderata exhibited by the ontology, i.e., ``this totally worked.'']
+
+[Quantitative evaluation of the ontology that showcases whatever BNOL
+is actually good at, e.g. finding POS, etc.]
+
+\subsection{Prediction}
+In addition to being able to extract meaningful structure from text
+data, BNOL defines a predictive model of streaming text that can be
+used to do language modeling (e.g. to facilitate speech recognition
+\cite{???}) or data compression \cite{???}.
+
+We evaluated BNOL's ability to predict the next word in a sequence
+based on the previous words. Our measure of predictive performance
+is perplexity, which is defined as
+\begin{equation}
+\perplexity(x, x_\textrm{train}) \equiv
+\exp\left\{-\frac{1}{N}\sum_{i=1}^N\log p(x_i|x_{1:i-1},
+x_\textrm{train})\right\}.
+\end{equation}
+
+[How well we do. Compare to infinite sequence memoizer?]
 
 %% \input{abstract}
 
@@ -164,8 +217,7 @@ $W$ is the size of the vocabulary.
 
 %\subsubsection*{References}
 \begin{small}
-\bibliographystyle{plainnat}
-\bibliography{../../columbia/papers/uber} 
+\bibliographystyle{plainnat} \bibliography{../../columbia/papers/uber}
 %\input{modrefs}
 \end{small}
 \end{document}
