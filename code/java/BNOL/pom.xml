@@ -3,12 +3,12 @@
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>edu.columbia.stat.wood.bnol</groupId>
-    <artifactId>hpyp</artifactId>
+    <groupId>edu.columbia.stat.wood</groupId>
+    <artifactId>bnol</artifactId>
     <version>1.0</version>
     <packaging>jar</packaging>
 
-    <name>HPYP</name>
+    <name>BNOL</name>
     <description></description>
 
     <repositories>
@@ -25,7 +25,7 @@
             <groupId>gnu</groupId>
             <artifactId>trove</artifactId>
             <version>3.0.0a3</version>
-             <type>jar</type>
+            <type>jar</type>
          </dependency>
          <dependency>
             <groupId>edu.columbia.stat.wood</groupId>
