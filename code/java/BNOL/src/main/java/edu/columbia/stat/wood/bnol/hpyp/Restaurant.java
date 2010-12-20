@@ -168,6 +168,22 @@ public class Restaurant<F> extends THashMap<F,Restaurant> {
         return draw;
     }
 
+    public int generate(MersenneTwisterFast rng){
+        double r = rng.nextDouble();
+        double cuSum = 0.0;
+
+        TIntObjectIterator<TSA> iterator = tableArrangements.iterator();
+        while(iterator.hasNext()){
+            iterator.advance();
+            cuSum = iterator.value().draw(cuSum, r, discount.value(), concentration.value(), customers);
+            if(cuSum > r){
+                return iterator.key();
+            }
+        }
+
+        return parent.generate(rng);
+    }
+
     /**
      * Gets the total number of customers that need sampling
      *
@@ -440,6 +456,16 @@ public class Restaurant<F> extends THashMap<F,Restaurant> {
                 if(cuSum > r){
                     sa[i]++;
                     customers++;
+                    break;
+                }
+            }
+            return cuSum;
+        }
+
+        public double generate(double cuSum, double r, double discount, double concentration, double totalCustomers){
+            for(int i = 0; i < sa.length; i++){
+                cuSum += ((double) sa[i] - discount) / (totalCustomers + concentration);
+                if(cuSum > r){
                     break;
                 }
             }
