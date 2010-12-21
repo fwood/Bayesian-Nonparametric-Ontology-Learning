@@ -1,8 +1,18 @@
 % !TEX root = main.tex
 \section{Introduction}
 
+Estimating discrete conditional distributions from counts (conditioned on a {\em context} vector of discrete observations) is a challenge that arises in a large number of settings including language modeling and collaborative filtering to name but two.  This problem can and has been phrased as a multi-class classification problem \cite{}, a multinomial regression problem \cite{}, and a hierarchical Bayesian estimation problem \cite{Teh2006b}.   Notwithstanding data intensive philosophies that prescribe merely collecting enough data to estimate any such conditional distribution directly with sufficient accuracy, 
+
+Climbing the Chomsky hierarchy.
+
+The sparsity of contexts and the difficulty of relating contexts is well understood by the field.  
+
 \subsection{Related Work}
-\citet{Redington1998} uncovered evidence that suggests that in human learning ``syntactical categories can be obtained from distributional information alone.''  They support this hypothesis by using ``link clustering'' to hierarchically cluster words using a high dimensional feature space representation of each word.  The feature space representation they use is the concatenation of the forward and backward bigram predictive probability distributions.   They show ``dendograms'' (tree ontologies) that relate 
+
+\citet{Blitzer2005} build a non-hierarchical ``distributed'' latent feature representation of predictive contexts by imposing a binary valued vector variable between the context and the observed word and learning a log linear predictive model from the latent variable to the observed word.  They used an expectation maximization (EM) algorithm whose cost was exponential in the dimension of the latent feature space to fit the model.  It was shown that the features learned through this procedure produced reductions in predictive uncertainty over low order $n$-gram models 
+
+
+\citet{Redington1998} uncovered evidence that suggests that in human learning ``syntactical categories can be obtained from distributional information alone.''  They support this hypothesis by using ``link clustering'' to hierarchically cluster words using a high dimensional feature space representation of each word.  The feature space representation they use is the concatenation of the forward and backward bigram predictive probability distributions (conditioned on the current word).   They show that ``dendograms'' (tree ontologies) can be learned that position ``similar'' words near one another in the tree.  Similarities between the vocabulary partitions induced by gold-standard, human labeled features and the clusterings induced by cutting the learned dendogram at various depths are used to quantitatively establish evidence for their hypothesis.   Namely, distributional clustering could potentially provide meaningful signal for a higher-level learner of syntax or semantics. 
 
 Data, CHILDES project \cite{MacWhinney2000}
 
