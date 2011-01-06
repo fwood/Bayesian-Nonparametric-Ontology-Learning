@@ -5,7 +5,7 @@
 
 package edu.columbia.stat.wood.bnol;
 
-import edu.columbia.stat.wood.bnol.hpyp.HPYP;
+import edu.columbia.stat.wood.bnol.hpyp.IntHPYP;
 import edu.columbia.stat.wood.bnol.util.MutableDouble;
 import edu.columbia.stat.wood.bnol.util.Pair;
 import gnu.trove.list.array.TByteArrayList;
@@ -99,7 +99,7 @@ public class StateFactory {
     }
 
     
-    private class Node extends HPYP<Integer> {
+    private class Node extends IntHPYP<Integer> {
         private Pair<Node,Node> children = new Pair<Node,Node>();
 
         public Node(IntTreeDiscreteDistribution baseDist){

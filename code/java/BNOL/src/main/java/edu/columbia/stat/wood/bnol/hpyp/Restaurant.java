@@ -10,7 +10,6 @@ import edu.columbia.stat.wood.bnol.util.MutableDouble;
 import edu.columbia.stat.wood.bnol.util.Pair;
 import edu.columbia.stat.wood.bnol.util.SampleWithoutReplacement;
 import gnu.trove.iterator.TIntObjectIterator;
-import gnu.trove.map.hash.THashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import java.util.Arrays;
 
@@ -19,7 +18,7 @@ import java.util.Arrays;
  * @author nicholasbartlett
  */
 
-public class Restaurant<F> extends THashMap<F,Restaurant> {
+public class Restaurant extends TIntObjectHashMap<Restaurant> {
 
     /**
      * total number of customers and tables in the restaurant
