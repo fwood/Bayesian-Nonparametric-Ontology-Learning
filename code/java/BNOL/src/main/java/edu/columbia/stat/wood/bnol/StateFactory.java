@@ -16,7 +16,7 @@ import gnu.trove.list.array.TByteArrayList;
  */
 
 public class StateFactory {
-
+/*
     private Node baseNode;
     private IntTreeDiscreteDistribution baseDist;
 
@@ -142,4 +142,5 @@ public class StateFactory {
             }
         }
     }
+    */
 }

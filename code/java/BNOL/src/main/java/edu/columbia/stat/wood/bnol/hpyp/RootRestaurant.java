@@ -19,83 +19,128 @@ import java.util.Iterator;
  */
 public class RootRestaurant extends Restaurant {
 
-    public IntDiscreteDistribution baseDistribution;
+    private IntDiscreteDistribution baseDistribution;
     private TIntObjectHashMap<MutableInt> customerCount;
 
+    /***********************constructor methods********************************/
+
     public RootRestaurant(IntDiscreteDistribution baseDistribution){
+        super(null, null, null);
         this.baseDistribution = baseDistribution;
         customerCount = new TIntObjectHashMap<MutableInt>();
     }
 
+    /***********************public methods*************************************/
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public double probability(int type){
         return baseDistribution.probability(type);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void seat(int type,MersenneTwisterFast rng){
-        MutableInt c = customerCount.get(type);
-        if(c == null){
-            c = new MutableInt(1);
-            customerCount.put(type, c);
+    public void seat(int type, MersenneTwisterFast rng){
+        MutableInt count = customerCount.get(type);
+        if(count == null){
+            count = new MutableInt(1);
+            customerCount.put(type, count);
         } else {
-            c.increment();
+            count.increment();
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void unseat(int type,MersenneTwisterFast rng){
-        MutableInt c = customerCount.get(type);
-        c.decrement();
+    public void unseat(int type, MersenneTwisterFast rng){
+        MutableInt count = customerCount.get(type);
+        count.decrement();
 
-        assert c.value() >= 0;
+        assert count.value() >= 0;
+        if(count.value() == 0){
+            customerCount.remove(type);
+        }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public int draw(MersenneTwisterFast rng){
-        Iterator<Pair<Integer,Double>> iterator = baseDistribution.iterator();
-        double r = rng.nextDouble();
-        double cuSum = 0.0;
-        Pair<Integer,Double> pair;
-        int draw = -1;
-        while(iterator.hasNext()){
-            pair = iterator.next();
-            cuSum += pair.second().doubleValue();
-            if(cuSum > r){
-                draw = pair.first().intValue();
-                break;
+    public int draw(double low, double high, int[] keyOrder, MersenneTwisterFast rng){
+        double cuSum = 0.0, randomNumber;
+        
+        if(keyOrder != null){
+            randomNumber = rng.nextDouble() * (high - low) + low;
+            for(int key : keyOrder){
+                cuSum += baseDistribution.probability(key);
+                if(cuSum > randomNumber){
+                    seat(key, rng);
+                    return key;
+                }
+            }
+        } else {
+            randomNumber = rng.nextDouble();
+            Iterator<Pair<Integer,Double>> iterator = baseDistribution.iterator();
+            while(iterator.hasNext()){
+                Pair<Integer,Double> pair = iterator.next();
+                cuSum += pair.second().doubleValue();
+                if(cuSum > randomNumber){
+                    seat(pair.first(), rng);
+                    return pair.first();
+                }
             }
         }
 
-        assert draw != -1;
-
-        MutableInt cnt = customerCount.get(draw);
-        if(cnt == null){
-            customerCount.put(draw,new MutableInt(1));
-        } else {
-            cnt.increment();
-        }
-
-        return draw;
+        throw new RuntimeException("You should never get to here since you should always generate a random number");
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public int generate(MersenneTwisterFast rng){
-        Iterator<Pair<Integer, Double>> iterator = baseDistribution.iterator();
-        double cuSum = 0.0, r = rng.nextDouble();
-        Pair<Integer,Double> e;
-        while(true){
-            e = iterator.next();
-            cuSum += e.second();
-            if(cuSum > r){
-                return e.first();
+    public int generate(double low, double high, int[] keyOrder, MersenneTwisterFast rng){
+        double cuSum = 0.0, randomNumber;
+        
+        if(keyOrder != null){
+            randomNumber = rng.nextDouble() * (high - low) + low;
+            for(int key : keyOrder){
+                cuSum += baseDistribution.probability(key);
+                if(cuSum > randomNumber){
+                    return key;
+                }
+            }
+        } else {
+            randomNumber = rng.nextDouble();
+            Iterator<Pair<Integer,Double>> iterator = baseDistribution.iterator();
+            while(iterator.hasNext()){
+                Pair<Integer,Double> pair = iterator.next();
+                cuSum += pair.second().doubleValue();
+                if(cuSum > randomNumber){
+                    return pair.first();
+                }
             }
         }
+
+        throw new RuntimeException("You should never get to here since you should always generate a random number");
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void sampleSeatingArrangements(MersenneTwisterFast rng){}
+    public void sampleSeatingArrangements(MersenneTwisterFast rng){
+        throw new RuntimeException("This method should never be called");
+    }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public double score(){
         double score = 0.0;
@@ -107,11 +152,34 @@ public class RootRestaurant extends Restaurant {
         return score;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void removeZeros(){
+        throw new RuntimeException("This method should never be called");
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean checkCounts(){
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void removeZeros(){}
+    public String toString() {
+        String toStr = "Root Restaurant : \n";
+        TIntObjectIterator<MutableInt> iterator = customerCount.iterator();
+        while(iterator.hasNext()){
+            iterator.advance();
+            toStr = toStr + iterator.key() + "->" + iterator.value().value() + "\n";
+        }
+        
+        return toStr;
+    }
 }

@@ -43,9 +43,10 @@ public abstract class HPYP {
      * @param context context in which to generate a random sample
      * @param low low edge of slice in [0.0, high)
      * @param high high edge of slice in (low, 1.0]
+     * @param keyOrder order of types for slice sampling
      * @return random sample
      */
-    abstract public int generate(int[] context, double low, double high);
+    abstract public int generate(int[] context, double low, double high, int[] keyOrder);
 
     /**
      * Draws a random sample from the predictive distribution at the node
@@ -53,9 +54,10 @@ public abstract class HPYP {
      * @param context context in which to generate a random sample
      * @param low low edge of slice in [0.0, high)
      * @param high high edge of slice in (low, 1.0]
+     * @param keyOrder order of types for slice sampling
      * @return random sample
      */
-    abstract public int draw(int[] context, double low, double high);
+    abstract public int draw(int[] context, double low, double high, int[] keyOrder);
 
     /**
      * Generates a random sample from the predictive distribution at the node
@@ -64,7 +66,7 @@ public abstract class HPYP {
      * @return random sample
      */
     public int generate(int[] context){
-        return generate(context, 0.0, 1.0);
+        return generate(context, 0.0, 1.0, null);
     }
     
     /**
@@ -74,7 +76,7 @@ public abstract class HPYP {
      * @return random sample
      */
     public int draw(int[] context){
-        return draw(context, 0.0, 1.0);
+        return draw(context, 0.0, 1.0, null);
     }
 
     /**

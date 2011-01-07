@@ -54,6 +54,14 @@ public class MutableDouble {
     }
 
     /**
+     * Gets a deep copy of this mutable double object.
+     * @return deep copy of object
+     */
+    public MutableDouble deepCopy(){
+        return new MutableDouble(value);
+    }
+
+    /**
      * Overrides the hash code to only reflect the underlying double value.
      * @return int hash code
      */
