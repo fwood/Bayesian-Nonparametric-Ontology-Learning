@@ -29,6 +29,14 @@ public class IntHPYP extends HPYP {
 
     /***********************constructor methods********************************/
 
+    /**
+     * Constructor method.
+     * @param depth depth of tree
+     * @param discounts array of depth specific discounts
+     * @param concentrations array of depth specific concentrations
+     * @param baseDistribution base distribution
+     * @param concentrationPrior prior on concentrations
+     */
     public IntHPYP(int depth, MutableDouble[] discounts, MutableDouble[] concentrations, IntDiscreteDistribution baseDistribution, GammaDistribution concentrationPrior) {
         if (depth < 0) {
             throw new IllegalArgumentException("depth must be >= 0");

@@ -26,7 +26,12 @@ public class S_EmissionDistribution {
     private MersenneTwisterFast RNG = new MersenneTwisterFast(5);
     
     /***********************constructor methods********************************/
-    
+
+    /**
+     * Basic constructor method.  In the method are hard coded priors which could
+     * be changed if these are not working well.
+     * @param b initial b used as the base distribution on the emissions at each node
+     */
     public S_EmissionDistribution(MutableDouble b){
         if(b.value() > 1.0 || b.value() < 0.0){
             throw new IllegalArgumentException("b must be in 0 - 1");
