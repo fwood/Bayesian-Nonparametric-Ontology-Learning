@@ -45,8 +45,15 @@ public class Restaurant extends TIntObjectHashMap<Restaurant> {
     /***********************public methods*************************************/
     
     /**
+     * Indicates if there are any customers in the restaurant.
+     * @return true if no customers in restaurant, else false
+     */
+    public boolean isEmptyRestaurant(){
+        return customers == 0;
+    }
+
+    /**
      * Calculates the probability of given type in the restaurant
-     *
      * @param type type to consider
      * @return probability
      */
@@ -280,6 +287,18 @@ public class Restaurant extends TIntObjectHashMap<Restaurant> {
      */
     public boolean checkCounts(){
         int c = 0, t = 0;
+        
+        TIntObjectIterator<Restaurant> iterator = this.iterator();
+        while(iterator.hasNext()){
+            iterator.advance();
+            c += iterator.value().tables;
+        }
+
+        if(!isEmpty()){
+            assert customers == c;
+        }
+
+        c = 0;
 
         for(TSA tsa : tableArrangements.valueCollection()){
             tsa.checkCounts();
@@ -622,7 +641,6 @@ public class Restaurant extends TIntObjectHashMap<Restaurant> {
          * Removes the zero entries from the seating arrangement vector sa.
          */
         public void removeZeros() {
-            //assert checkCounts();
             if (sa.length != tables) {
                 int[] newsa = new int[tables];
                 int t = 0;

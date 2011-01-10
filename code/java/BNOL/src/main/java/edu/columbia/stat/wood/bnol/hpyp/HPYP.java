@@ -80,6 +80,18 @@ public abstract class HPYP {
     }
 
     /**
+     * Commits the customers created during the draw steps up until the previous
+     * commit or revert.
+     */
+    abstract public void commitDraw();
+
+    /**
+     * Removes customers created during the draw steps up until the previous
+     * commit or revert.
+     */
+    abstract public void revertDraw();
+
+    /**
      * Sample the seating arrangements a given number of times.
      * @param sweeps number of sweeps to pass through
      */
@@ -132,13 +144,6 @@ public abstract class HPYP {
 
     /**
      * Remove nodes/restaurants without customers.
-     * @return number of nodes removed
      */
-    abstract public int removeEmptyNodes();
-
-    /**
-     * Gets a deep copy of the object.
-     * @return deep copy of object
-     */
-    abstract public HPYP deepCopy();
+    abstract public void removeEmptyNodes();
 }

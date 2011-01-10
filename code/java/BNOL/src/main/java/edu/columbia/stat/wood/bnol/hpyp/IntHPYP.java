@@ -9,11 +9,13 @@ import edu.columbia.stat.wood.bnol.util.IntDiscreteDistribution;
 import edu.columbia.stat.wood.bnol.util.IntUniformDiscreteDistribution;
 import edu.columbia.stat.wood.bnol.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.bnol.util.MutableDouble;
+import edu.columbia.stat.wood.bnol.util.Pair;
 import gnu.trove.iterator.TIntObjectIterator;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 
 /**
  *
@@ -27,6 +29,7 @@ public class IntHPYP extends HPYP {
     private MutableDouble[] concentrations;
     private int depth;
     private GammaDistribution concentrationPrior;
+    private ArrayList<Pair<int[], Integer>> drawHistory;
 
     /***********************constructor methods********************************/
 
@@ -81,6 +84,7 @@ public class IntHPYP extends HPYP {
         root = new RootRestaurant(baseDistribution);
         ecr = new Restaurant(root, this.concentrations[0], this.discounts[0]);
         RNG = new MersenneTwisterFast(3);
+        drawHistory = new ArrayList<Pair<int[], Integer>>();
     }
 
     /***********************public methods*************************************/
@@ -117,7 +121,26 @@ public class IntHPYP extends HPYP {
      * {@inheritDoc}
      */
     public int draw(int[] context, double low, double high, int[] keyOrder) {
-        return get(context).draw(low, high, keyOrder, RNG);
+        int draw = get(context).draw(low, high, keyOrder, RNG);
+        drawHistory.add(new Pair(context, draw));
+        return draw;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public void commitDraw() {
+        drawHistory.clear();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public void revertDraw() {
+        for(Pair<int[], Integer> pair : drawHistory){
+            get(pair.first()).unseat(pair.second(), RNG);
+        }
+        drawHistory.clear();
     }
 
     /**
@@ -174,15 +197,8 @@ public class IntHPYP extends HPYP {
     /**
      * {@inheritDoc}
      */
-    public int removeEmptyNodes() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public HPYP deepCopy() {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public void removeEmptyNodes() {
+        removeEmptyNodes(ecr);
     }
 
     /**
@@ -333,6 +349,23 @@ public class IntHPYP extends HPYP {
     }
 
     /**
+     * Recursive function which executes the removal of nodes with no customers.
+     * @param currentRestaurant
+     */
+    private void removeEmptyNodes(Restaurant currentRestaurant){
+        TIntObjectIterator<Restaurant> iterator = currentRestaurant.iterator();
+        while(iterator.hasNext()){
+            iterator.advance();
+
+            if(iterator.value().isEmptyRestaurant()){
+                iterator.remove();
+            } else {
+                removeEmptyNodes(iterator.value());
+            }
+        }
+    }
+
+    /**
      * Metropolis step for sampling concentration and discount parameters.  A
      * flat prior is assumed for the discount parameters.
      * @return joint log likelihood of model
@@ -439,7 +472,7 @@ public class IntHPYP extends HPYP {
             for(int i = 0; i < length; i++){
                 context = new int[i];
                 System.arraycopy(sample,0, context, 0, i);
-                sample[i] = hpyp.draw(context);
+                sample[i] = hpyp.generate(context);
             }
 
             for(int i = 1; i < 10; i++){
@@ -457,4 +490,5 @@ public class IntHPYP extends HPYP {
             bis.close();
         }
     }
+
 }
