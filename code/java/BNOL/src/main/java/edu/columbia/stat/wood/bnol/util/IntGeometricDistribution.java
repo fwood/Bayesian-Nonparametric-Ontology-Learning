@@ -21,12 +21,35 @@ public class IntGeometricDistribution implements IntDiscreteDistribution {
         this.q = q;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public double probability(int type) {
         if (type >= 0){
             return Math.pow(q, type) * (1-q);
         } else {
             return 0.0;
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public int generate(MersenneTwisterFast rng){
+        double randomNumber = rng.nextDouble(), cuSum = 0.0, prob = 1.0 - q;
+        int sample = -1;
+
+        while(cuSum <= randomNumber && sample >= -1){
+            cuSum += prob;
+            prob *= q;
+            sample++;
+        }
+
+        if(cuSum <= randomNumber){
+            throw new RuntimeException("Something bad happened, cuSum = " + cuSum + ", randomNumber = " + randomNumber);
+        }
+
+        return sample;
     }
 
     public Iterator<Pair<Integer, Double>> iterator() {

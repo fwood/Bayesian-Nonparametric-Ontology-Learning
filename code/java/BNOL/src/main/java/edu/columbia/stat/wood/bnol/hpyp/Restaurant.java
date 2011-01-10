@@ -127,15 +127,13 @@ public class Restaurant extends TIntObjectHashMap<Restaurant> {
         if(keyOrder !=  null){
             randomNumber = rng.nextDouble() * (high - low) + low;
             for(int i = 0; i < keyOrder.length; i++){
-                TSA currentValue = tableArrangements.get(keyOrder[i]);
-                if(currentValue != null) {
-                    cuSum = currentValue.draw(cuSum, randomNumber, discount.value(), concentration.value(), customers);
-                    if(cuSum > randomNumber){
-                        customers++;
-                        return keyOrder[i];
-                    }
+                cuSum += probability(keyOrder[i]);
+                if(cuSum > randomNumber){
+                    seat(keyOrder[i], rng);
+                    return keyOrder[i];
                 }
             }
+            throw new RuntimeException("should not get to here");
         } else {
             TIntObjectIterator<TSA> iterator = tableArrangements.iterator();
             randomNumber = rng.nextDouble();
@@ -177,17 +175,15 @@ public class Restaurant extends TIntObjectHashMap<Restaurant> {
     public int generate(double low, double high, int[] keyOrder, MersenneTwisterFast rng){
         double randomNumber, cuSum = 0.0;
 
-        if(keyOrder != null){
+        if(keyOrder !=  null){
             randomNumber = rng.nextDouble() * (high - low) + low;
             for(int i = 0; i < keyOrder.length; i++){
-                TSA currentValue = tableArrangements.get(keyOrder[i]);
-                if(currentValue != null){
-                    cuSum = currentValue.generate(cuSum, randomNumber, discount.value(), concentration.value(), customers);
-                    if(cuSum > randomNumber){
-                        return keyOrder[i];
-                    }
+                cuSum += probability(keyOrder[i]);
+                if(cuSum > randomNumber){
+                    return keyOrder[i];
                 }
             }
+            throw new RuntimeException("should not get to here");
         } else {
             randomNumber = rng.nextDouble();
             TIntObjectIterator<TSA> iterator = tableArrangements.iterator();

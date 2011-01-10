@@ -38,6 +38,20 @@ public class RootRestaurant extends Restaurant {
      * {@inheritDoc}
      */
     @Override
+    public boolean isEmptyRestaurant(){
+        int customers = 0;
+        TIntObjectIterator<MutableInt> iterator = customerCount.iterator();
+        while(iterator.hasNext()){
+            iterator.advance();
+            customers += iterator.value().value();
+        }
+        return customers == 0;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public double probability(int type){
         return baseDistribution.probability(type);
     }

@@ -88,6 +88,13 @@ public class IntHPYP extends HPYP {
     /**
      * {@inheritDoc}
      */
+    public boolean isEmpty(){
+        return ecr.isEmptyRestaurant();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     public double prob(int[] context, int type){
         return get(context).probability(type);
     }
@@ -186,8 +193,29 @@ public class IntHPYP extends HPYP {
     /**
      * {@inheritDoc}
      */
-    public double score() {
-        return score(ecr) + root.score() + scoreHyperParameters();
+    public double score(boolean withHyperParameters) {
+        double score = score(ecr) + root.score();
+        if(withHyperParameters){
+            score += scoreHyperParameters();
+        }
+        return score;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public double[] scoreByDepth(boolean withHyperParameters) {
+        double[] score = new double[depth + 1];
+
+        if (withHyperParameters) {
+            for (int i = 0; i < (depth + 1); i++) {
+                score[i] = concentrationPrior.logProportionalToDensity(concentrations[i].value());
+            }
+        }
+
+        scoreByDepth(ecr, 0, score);
+
+        return score;
     }
 
     /**
@@ -259,26 +287,6 @@ public class IntHPYP extends HPYP {
 
             return current;
         }
-    }
-
-    /**
-     * Calculates the joint log likelihood contributions of restaurants at each 
-     * depth of the tree. This method is primarily for use with sampling the
-     * concentration and discount parameters. The sum of this vector plus the
-     * contribution of the root restaurant gives the same result as the score
-     * method.
-     * @return log likelihood contributions of restaurants at each depth of the tree
-     */
-    private double[] scoreByDepth() {
-        double[] score = new double[depth + 1];
-
-        for(int i = 0; i < (depth + 1); i++){
-            score[i] = concentrationPrior.logProportionalToDensity(concentrations[i].value());
-        }
-
-        scoreByDepth(ecr, 0, score);
-        
-        return score;
     }
 
     /**
@@ -368,7 +376,7 @@ public class IntHPYP extends HPYP {
      */
     private double sampleHyperParams(){
         double stdDiscounts = .01,stdConcentrations = .2;
-        double[] currentScore = scoreByDepth();
+        double[] currentScore = scoreByDepth(true);
 
         // get the current values
         double[] currentDiscounts = new double[discounts.length];
@@ -387,7 +395,7 @@ public class IntHPYP extends HPYP {
         }
 
         // get score given proposals
-        double[] afterScore = scoreByDepth();
+        double[] afterScore = scoreByDepth(true);
 
         // choose to accept or reject each proposal
         for (int i = 0; i < (depth + 1); i++) {
@@ -409,7 +417,7 @@ public class IntHPYP extends HPYP {
         }
 
         // get score given proposals
-        afterScore = scoreByDepth();
+        afterScore = scoreByDepth(true);
 
         // choose to accept or reject each proposal
         double score = 0.0;

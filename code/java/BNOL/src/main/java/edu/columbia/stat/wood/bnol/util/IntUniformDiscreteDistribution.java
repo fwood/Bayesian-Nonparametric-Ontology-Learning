@@ -58,7 +58,7 @@ public class IntUniformDiscreteDistribution implements IntDiscreteDistribution, 
      */
     public int generate(MersenneTwisterFast rng){
         double randomNumber = rng.nextDouble(), cuSum = 0.0;
-        int sample = leftType;
+        int sample = leftType - 1;
 
         while(cuSum <= randomNumber && sample <= rightType){
             cuSum += p;

@@ -42,6 +42,24 @@ public class IntTreeDiscreteDistribution implements IntDiscreteDistribution {
     }
 
     /**
+     * {@inheritDoc}
+     */
+    public int generate(MersenneTwisterFast rng){
+        double randomNumber = rng.nextDouble(), cuSum = 0.0;
+        int sample = -1;
+
+        while(cuSum <= randomNumber && sample < 3){
+            cuSum += probability(++sample);
+        }
+
+        if(cuSum <= randomNumber || cuSum > 1.0){
+            throw new RuntimeException("Something bad happened, cuSum = " + cuSum + ", randomNumber = " + randomNumber);
+        }
+
+        return sample;
+    }
+
+    /**
      * Gets an iterator over the type, probability pairs of this distribution.
      * @return iterator
      */

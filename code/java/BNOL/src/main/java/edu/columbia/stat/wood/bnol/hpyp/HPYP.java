@@ -13,6 +13,12 @@ package edu.columbia.stat.wood.bnol.hpyp;
 public abstract class HPYP {
 
     /**
+     * Indicates if the entire HPYP is empty
+     * @return true if empty, else false
+     */
+    abstract public boolean isEmpty();
+
+    /**
      * Get the probability of a given type in a given context.
      * @param context context
      * @param type type to get probability of
@@ -135,9 +141,21 @@ public abstract class HPYP {
 
     /**
      * Gets joint log likelihood.
+     * @param withHyperParameters if true then include prior on hyper parameters
      * @return joint log likelihood
      */
-    abstract public double score();
+    abstract public double score(boolean withHyperParameters);
+
+    /**
+     * Calculates the joint log likelihood contributions of restaurants at each
+     * depth of the tree. This method is primarily for use with sampling the
+     * concentration and discount parameters. The sum of this vector plus the
+     * contribution of the root restaurant gives the same result as the score
+     * method.
+     * @param withHyperParameters if true then include prior on hyper parameters
+     * @return log likelihood contributions of restaurants at each depth of the tree
+     */
+    abstract public double[] scoreByDepth(boolean withHyperParameters);
 
     /**
      * Remove nodes/restaurants without customers.
