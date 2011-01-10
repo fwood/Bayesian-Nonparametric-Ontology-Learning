@@ -6,12 +6,9 @@
 package edu.columbia.stat.wood.bnol.hpyp;
 
 /**
- * 
- * @author nicholasbartlett
- * 
  * Abstract class to set up a nice interface for the HPYP object used in this
  * project.
- * 
+ * @author nicholasbartlett
  */
 public abstract class HPYP {
 

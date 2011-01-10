@@ -21,6 +21,13 @@ public interface IntDiscreteDistribution {
     public double probability(int type);
 
     /**
+     * Generates a random sample from the discrete distribution.
+     * @param rng random number generator
+     * @return generated int sample
+     */
+    public int generate(MersenneTwisterFast rng);
+
+    /**
      * Gets an iterator over Integer Double pairs such that the Double value is the
      * probability of the Integer value in the distribution.  The assumption is that
      * the iterator will iterate over the unique types in this distribution which
@@ -29,4 +36,5 @@ public interface IntDiscreteDistribution {
      * @return iterator
      */
     public Iterator<Pair<Integer, Double>> iterator();
+
 }

@@ -6,19 +6,15 @@ package edu.columbia.stat.wood.bnol.hpyp;
 
 import edu.columbia.stat.wood.bnol.util.GammaDistribution;
 import edu.columbia.stat.wood.bnol.util.IntDiscreteDistribution;
-import edu.columbia.stat.wood.bnol.util.IntUniformDiscreteDistribution;
 import edu.columbia.stat.wood.bnol.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.bnol.util.MutableDouble;
 import edu.columbia.stat.wood.bnol.util.Pair;
 import gnu.trove.iterator.TIntObjectIterator;
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 
 /**
- *
+ * Int based implementation of the fully instantiated HPYP.  Both contexts and
+ * types are assumed to be int typed.
  * @author nicholasbartlett
  */
 public class IntHPYP extends HPYP {
@@ -430,7 +426,8 @@ public class IntHPYP extends HPYP {
 
         return score + root.score();
     }
-
+    
+    /*
     public static void main(String[] args) throws IOException{
         File f = new File("/Users/nicholasbartlett/Documents/np_bayes/data/pride_and_prejudice/pride_and_prejudice.txt");
 
@@ -472,9 +469,11 @@ public class IntHPYP extends HPYP {
             for(int i = 0; i < length; i++){
                 context = new int[i];
                 System.arraycopy(sample,0, context, 0, i);
-                sample[i] = hpyp.generate(context);
+                sample[i] = hpyp.draw(context);
             }
 
+            hpyp.revertDraw();
+            
             for(int i = 1; i < 10; i++){
                 System.out.println(hpyp.sample());
                 hpyp.printConcentrations();
@@ -489,6 +488,5 @@ public class IntHPYP extends HPYP {
         } finally {
             bis.close();
         }
-    }
-
+    }*/
 }

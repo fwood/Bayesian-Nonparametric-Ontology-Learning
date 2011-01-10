@@ -14,7 +14,9 @@ import gnu.trove.map.hash.TIntObjectHashMap;
 import java.util.Iterator;
 
 /**
- *
+ * An override of the Restaurant class to put at the very base of the tree to
+ * facilitate the end of the many recursive methods which run up the tree from
+ * its nodes.
  * @author nicholasbartlett
  */
 public class RootRestaurant extends Restaurant {

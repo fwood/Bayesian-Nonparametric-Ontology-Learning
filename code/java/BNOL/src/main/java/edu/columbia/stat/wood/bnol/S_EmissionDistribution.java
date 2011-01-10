@@ -6,6 +6,7 @@
 package edu.columbia.stat.wood.bnol;
 
 import edu.columbia.stat.wood.bnol.hpyp.IntHPYP;
+import edu.columbia.stat.wood.bnol.util.GammaDistribution;
 import edu.columbia.stat.wood.bnol.util.MutableDouble;
 import edu.columbia.stat.wood.bnol.util.Pair;
 import gnu.trove.list.array.TByteArrayList;
@@ -15,7 +16,7 @@ import gnu.trove.list.array.TByteArrayList;
  * @author nicholasbartlett
  */
 
-public class StateFactory {
+public class S_EmissionDistribution {
 /*
     private Node baseNode;
     private IntTreeDiscreteDistribution baseDist;
@@ -98,12 +99,14 @@ public class StateFactory {
         return out.toArray();
     }
 
+    */
     
-    private class Node extends IntHPYP<Integer> {
+    private class Node extends IntHPYP {
+
         private Pair<Node,Node> children = new Pair<Node,Node>();
 
         public Node(IntTreeDiscreteDistribution baseDist){
-            super(1, new MutableDouble[]{new MutableDouble(1),new MutableDouble(1)}, new MutableDouble[]{new MutableDouble(1),new MutableDouble(1)}, baseDist);
+            super(1, new MutableDouble[]{new MutableDouble(.3),new MutableDouble(.5)}, new MutableDouble[]{new MutableDouble(5),new MutableDouble(1)}, baseDist, new GammaDistribution(1,100));
         }
 
         public Node get(byte key){
@@ -142,5 +145,4 @@ public class StateFactory {
             }
         }
     }
-    */
 }

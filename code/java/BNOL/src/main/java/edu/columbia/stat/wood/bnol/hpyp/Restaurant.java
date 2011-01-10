@@ -283,7 +283,7 @@ public class Restaurant extends TIntObjectHashMap<Restaurant> {
     /**
      * Checks that the counts for the individual TSA objects add up totals
      * recorded in the object.  Also calls check counts for each TSA object.
-     * @return
+     * @return true if internal counts are consistent, else false
      */
     public boolean checkCounts(){
         int c = 0, t = 0;

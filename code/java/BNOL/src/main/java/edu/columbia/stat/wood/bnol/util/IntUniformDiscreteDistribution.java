@@ -54,6 +54,25 @@ public class IntUniformDiscreteDistribution implements IntDiscreteDistribution, 
     }
 
     /**
+     * {@inheritDoc}
+     */
+    public int generate(MersenneTwisterFast rng){
+        double randomNumber = rng.nextDouble(), cuSum = 0.0;
+        int sample = leftType;
+
+        while(cuSum <= randomNumber && sample <= rightType){
+            cuSum += p;
+            sample++;
+        }
+
+        if(cuSum <= randomNumber || cuSum > 1.0){
+            throw new RuntimeException("Something bad happened, cuSum = " + cuSum + ", randomNumber = " + randomNumber);
+        }
+
+        return sample;
+    }
+
+    /**
      * Gets an iterator over Integer Double pairs such that the Double value is
      * the probability of the integer type in this discrete distribution.
      * @return iterator
