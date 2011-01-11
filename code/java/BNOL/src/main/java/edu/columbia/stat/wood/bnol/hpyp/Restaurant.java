@@ -43,7 +43,7 @@ public class Restaurant extends TIntObjectHashMap<Restaurant> {
     }
 
     /***********************public methods*************************************/
-    
+
     /**
      * Indicates if there are any customers in the restaurant.
      * @return true if no customers in restaurant, else false
@@ -324,6 +324,20 @@ public class Restaurant extends TIntObjectHashMap<Restaurant> {
             }
         }
         return toStr;
+    }
+
+    /**
+     * Gets the number of customers in this restaurant from the data.
+     * @return number of data points in this restaurant
+     */
+    public int impliedData(){
+        int c = 0;
+        TIntObjectIterator<Restaurant> iterator = iterator();
+        while(iterator.hasNext()){
+            iterator.advance();
+            c += iterator.value().tables;
+        }
+        return customers - c;
     }
 
     /***********************private methods************************************/

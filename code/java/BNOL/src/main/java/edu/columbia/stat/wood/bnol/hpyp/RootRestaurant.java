@@ -198,4 +198,12 @@ public class RootRestaurant extends Restaurant {
         
         return toStr;
     }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int impliedData(){
+        return 0;
+    }
 }

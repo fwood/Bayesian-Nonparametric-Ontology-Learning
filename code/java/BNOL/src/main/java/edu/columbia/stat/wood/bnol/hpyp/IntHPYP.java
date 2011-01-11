@@ -6,11 +6,19 @@ package edu.columbia.stat.wood.bnol.hpyp;
 
 import edu.columbia.stat.wood.bnol.util.GammaDistribution;
 import edu.columbia.stat.wood.bnol.util.IntDiscreteDistribution;
+import edu.columbia.stat.wood.bnol.util.IntUniformDiscreteDistribution;
 import edu.columbia.stat.wood.bnol.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.bnol.util.MutableDouble;
 import edu.columbia.stat.wood.bnol.util.Pair;
 import gnu.trove.iterator.TIntObjectIterator;
-import java.util.ArrayList;
+import gnu.trove.iterator.TObjectIntIterator;
+import gnu.trove.map.hash.TObjectIntHashMap;
+import gnu.trove.set.hash.THashSet;
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Arrays;
 
 /**
  * Int based implementation of the fully instantiated HPYP.  Both contexts and
@@ -19,13 +27,13 @@ import java.util.ArrayList;
  */
 public class IntHPYP extends HPYP {
 
-    private MersenneTwisterFast RNG;
+    private MersenneTwisterFast rng;
     private Restaurant ecr, root;
     private MutableDouble[] discounts;
     private MutableDouble[] concentrations;
     private int depth;
     private GammaDistribution concentrationPrior;
-    private ArrayList<Pair<int[], Integer>> drawHistory;
+    //private ArrayList<Pair<int[], Integer>> drawHistory;
 
     /***********************constructor methods********************************/
 
@@ -87,8 +95,8 @@ public class IntHPYP extends HPYP {
         this.depth = depth;
         root = new RootRestaurant(baseDistribution);
         ecr = new Restaurant(root, this.concentrations[0], this.discounts[0]);
-        RNG = new MersenneTwisterFast(3);
-        drawHistory = new ArrayList<Pair<int[], Integer>>();
+        rng = new MersenneTwisterFast(3);
+        //drawHistory = new ArrayList<Pair<int[], Integer>>();
     }
 
     /***********************public methods*************************************/
@@ -111,48 +119,48 @@ public class IntHPYP extends HPYP {
      * {@inheritDoc}
      */
     public void seat(int[] context, int type){
-        get(context).seat(type,RNG);
+        get(context).seat(type,rng);
     }
 
     /**
      * {@inheritDoc}
      */
     public void unseat(int[] context, int type){
-        get(context).unseat(type,RNG);
+        get(context).unseat(type,rng);
     }
 
     /**
      * {@inheritDoc}
      */
     public int generate(int[] context, double low, double high, int[] keyOrder) {
-        return get(context).generate(low, high, keyOrder, RNG);
+        return get(context).generate(low, high, keyOrder, rng);
     }
 
     /**
      * {@inheritDoc}
      */
     public int draw(int[] context, double low, double high, int[] keyOrder) {
-        int draw = get(context).draw(low, high, keyOrder, RNG);
-        drawHistory.add(new Pair(context, draw));
+        int draw = get(context).draw(low, high, keyOrder, rng);
+        //drawHistory.add(new Pair(context, draw));
         return draw;
     }
 
     /**
      * {@inheritDoc}
      */
-    public void commitDraw() {
+    /*public void commitDraw() {
         drawHistory.clear();
-    }
+    }*/
 
     /**
      * {@inheritDoc}
      */
-    public void revertDraw() {
+    /*public void revertDraw() {
         for(Pair<int[], Integer> pair : drawHistory){
-            get(pair.first()).unseat(pair.second(), RNG);
+            get(pair.first()).unseat(pair.second(), rng);
         }
         drawHistory.clear();
-    }
+    }*/
 
     /**
      * {@inheritDoc}
@@ -231,6 +239,15 @@ public class IntHPYP extends HPYP {
      */
     public void removeEmptyNodes() {
         removeEmptyNodes(ecr);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public TObjectIntHashMap<int[]> getImpliedData(){
+        TObjectIntHashMap<int[]> impliedData = new TObjectIntHashMap();
+        getImpliedData(ecr, impliedData, new int[0]);
+        return impliedData;
     }
 
     /**
@@ -357,7 +374,7 @@ public class IntHPYP extends HPYP {
             sampleSeatingArrangements(iterator.value());
         }
 
-        currentRestaurant.sampleSeatingArrangements(RNG);
+        currentRestaurant.sampleSeatingArrangements(rng);
     }
 
     /**
@@ -396,7 +413,7 @@ public class IntHPYP extends HPYP {
 
         // make proposals for discounts
         for (int i = 0; i < (depth + 1); i++) {
-            discounts[i].plusEquals(stdDiscounts * RNG.nextGaussian());
+            discounts[i].plusEquals(stdDiscounts * rng.nextGaussian());
             if (discounts[i].value() >= 1.0 || discounts[i].value() <= 0.0) {
                 discounts[i].set(currentDiscounts[i]);
             }
@@ -409,7 +426,7 @@ public class IntHPYP extends HPYP {
         for (int i = 0; i < (depth + 1); i++) {
             double r = Math.exp(afterScore[i] - currentScore[i]);
 
-            if (RNG.nextDouble() < r) {
+            if (rng.nextDouble() < r) {
                 currentScore[i] = afterScore[i];
             } else {
                 discounts[i].set(currentDiscounts[i]);
@@ -418,7 +435,7 @@ public class IntHPYP extends HPYP {
 
         //make proposals for concentrations
         for (int i = 0; i < (depth + 1); i++) {
-            concentrations[i].plusEquals(stdConcentrations * RNG.nextGaussian());
+            concentrations[i].plusEquals(stdConcentrations * rng.nextGaussian());
             if (concentrations[i].value() <= 0.0) {
                 concentrations[i].set(currentConcentrations[i]);
             }
@@ -432,7 +449,7 @@ public class IntHPYP extends HPYP {
         for (int i = 0; i < (depth + 1); i++) {
             double r = Math.exp(afterScore[i] - currentScore[i]);
 
-            if (RNG.nextDouble() < r) {
+            if (rng.nextDouble() < r) {
                 score += afterScore[i];
             } else {
                 score += currentScore[i];
@@ -442,12 +459,33 @@ public class IntHPYP extends HPYP {
 
         return score + root.score();
     }
+
+    /**
+     * Recursive function to get the imlied data in this HPYP object.
+     * @param currentRestaurant current restaurant of the recursion
+     * @param impliedData implied data
+     * @param thisContext context at current restaurant
+     */
+    private void getImpliedData(Restaurant currentRestaurant, TObjectIntHashMap<int[]> impliedData, int[] thisContext){
+        
+        TIntObjectIterator<Restaurant> iterator = currentRestaurant.iterator();
+        while(iterator.hasNext()){
+            iterator.advance();
+
+            int[] childContext = new int[thisContext.length + 1];
+            System.arraycopy(thisContext, 0, childContext, 0, thisContext.length);
+            childContext[thisContext.length] = iterator.key();
+
+            getImpliedData(iterator.value(), impliedData, childContext);
+        }
+        
+        impliedData.put(thisContext, currentRestaurant.impliedData());
+    }
     
-    /*
     public static void main(String[] args) throws IOException{
         File f = new File("/Users/nicholasbartlett/Documents/np_bayes/data/pride_and_prejudice/pride_and_prejudice.txt");
 
-        int depth = 5;
+        int depth = 2;
         int[] context = new int[depth];
 
         BufferedInputStream bis = null;
@@ -472,8 +510,8 @@ public class IntHPYP extends HPYP {
             //System.out.println(hpyp.root);
             //System.out.println(hpyp.ecr);
             //System.out.println(hpyp.ecr.size());
-            System.out.println(hpyp.score());
-            for(int i = 1; i < 10; i++){
+            System.out.println(hpyp.score(true));
+            for(int i = 0; i < 1; i++){
                 System.out.println(hpyp.sample());
                 hpyp.printConcentrations();
                 hpyp.printDiscounts();
@@ -485,12 +523,10 @@ public class IntHPYP extends HPYP {
             for(int i = 0; i < length; i++){
                 context = new int[i];
                 System.arraycopy(sample,0, context, 0, i);
-                sample[i] = hpyp.draw(context);
+                sample[i] = hpyp.generate(context);
             }
-
-            hpyp.revertDraw();
             
-            for(int i = 1; i < 10; i++){
+            for(int i = 0; i < 1; i++){
                 System.out.println(hpyp.sample());
                 hpyp.printConcentrations();
                 hpyp.printDiscounts();
@@ -501,8 +537,18 @@ public class IntHPYP extends HPYP {
                 System.out.print((char) sample[i]);
             }
 
+            System.out.println();
+            TObjectIntHashMap<int[]> impliedData = hpyp.getImpliedData();
+            System.out.println(impliedData.size());
+            TObjectIntIterator<int[]> iterator = impliedData.iterator();
+            for(int i = 0; i < 100; i++){
+                iterator.advance();
+                System.out.print(Arrays.toString(iterator.key()) + ", ");
+                System.out.println(iterator.value());
+            }
+
         } finally {
             bis.close();
         }
-    }*/
+    }
 }

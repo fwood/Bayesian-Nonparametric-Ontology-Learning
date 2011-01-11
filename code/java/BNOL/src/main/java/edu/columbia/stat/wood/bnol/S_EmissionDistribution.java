@@ -23,7 +23,7 @@ public class S_EmissionDistribution {
     private IntTreeDiscreteDistribution baseDist;
     private MutableDouble[] discounts, concentrations;
     private GammaDistribution concentrationPrior;
-    private MersenneTwisterFast RNG = new MersenneTwisterFast(5);
+    private MersenneTwisterFast rng = new MersenneTwisterFast(5);
     
     /***********************constructor methods********************************/
 
@@ -88,7 +88,7 @@ public class S_EmissionDistribution {
         
         int emission = -1;
         double cuSum, cuSumLast;
-        double randomNumber = RNG.nextDouble() * (high - low) + low;
+        double randomNumber = rng.nextDouble() * (high - low) + low;
         while(true){
             emission = -1;
             cuSum = 0.0;
@@ -257,13 +257,13 @@ public class S_EmissionDistribution {
     private double sampleHyperParameters(){
         double[] c = new double[]{concentrations[0].value(), concentrations[1].value()};
         double[] d = new double[]{discounts[0].value(), discounts[1].value()};
-        double stdDiscounts = .01, stdConcentrations = .2;
+        double stdDiscounts = .01, stdConcentrations = .2, r;
 
         double[] score = scoreByDepth();
 
         // propose for discounts
         for (int i = 0; i < 2; i++) {
-            discounts[i].plusEquals(stdDiscounts * RNG.nextGaussian());
+            discounts[i].plusEquals(stdDiscounts * rng.nextGaussian());
             if (discounts[i].value() <= 0.0 || discounts[i].value() >= 1.0) {
                 discounts[i].set(d[i]);
             }
@@ -274,7 +274,9 @@ public class S_EmissionDistribution {
 
         // accept for discounts
         for(int i = 0; i < 2; i++){
-            if(RNG.nextBoolean(Math.exp(proposedScore[i] - score[i]))){
+            r = Math.exp(proposedScore[i] - score[i]);
+            r = r < 1.0 ? r : 1.0;
+            if(rng.nextBoolean(r)){
                 score[i] = proposedScore[i];
             } else {
                 discounts[i].set(d[i]);
@@ -283,7 +285,7 @@ public class S_EmissionDistribution {
 
         // propose for concentrations
         for (int i = 0; i < 2; i++){
-            concentrations[i].plusEquals(stdConcentrations * RNG.nextGaussian());
+            concentrations[i].plusEquals(stdConcentrations * rng.nextGaussian());
             if(concentrations[i].value() <= 0.0){
                 concentrations[i].set(c[i]);
             }
@@ -294,7 +296,9 @@ public class S_EmissionDistribution {
 
         // accept for concentrations
         for(int i = 0; i < 2; i++){
-            if(RNG.nextBoolean(Math.exp(proposedScore[i] - score[i]))){
+            r = Math.exp(proposedScore[i] - score[i]);
+            r = r < 1.0 ? r : 1.0;
+            if(rng.nextBoolean(r)){
                 score[i] = proposedScore[i];
             } else {
                 concentrations[i].set(c[i]);

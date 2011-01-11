@@ -8,7 +8,7 @@ package edu.columbia.stat.wood.bnol.util;
 import java.util.Iterator;
 
 /**
- * Geometric distribution over 0 - infty with probability of failure q
+ * Geometric distribution over offset - infty with probability of failure q
  * 
  * @author nicholasbartlett
  */
@@ -16,15 +16,18 @@ import java.util.Iterator;
 public class IntGeometricDistribution implements IntDiscreteDistribution {
 
     private double q;
+    private int offset;
 
-    public IntGeometricDistribution(double q){
+    public IntGeometricDistribution(double q, int offset){
         this.q = q;
+        this.offset = offset;
     }
 
     /**
      * {@inheritDoc}
      */
     public double probability(int type) {
+        type -= offset;
         if (type >= 0){
             return Math.pow(q, type) * (1-q);
         } else {
@@ -49,7 +52,7 @@ public class IntGeometricDistribution implements IntDiscreteDistribution {
             throw new RuntimeException("Something bad happened, cuSum = " + cuSum + ", randomNumber = " + randomNumber);
         }
 
-        return sample;
+        return sample + offset;
     }
 
     public Iterator<Pair<Integer, Double>> iterator() {
@@ -58,8 +61,8 @@ public class IntGeometricDistribution implements IntDiscreteDistribution {
 
     private class GeoIterator implements Iterator<Pair<Integer,Double>> {
 
-        private IntGeometricDistribution geoDist = new IntGeometricDistribution(q);
-        private int next = 0;
+        private IntGeometricDistribution geoDist = new IntGeometricDistribution(q, offset);
+        private int next = 0 + offset;
 
         public boolean hasNext() {
             return true;
