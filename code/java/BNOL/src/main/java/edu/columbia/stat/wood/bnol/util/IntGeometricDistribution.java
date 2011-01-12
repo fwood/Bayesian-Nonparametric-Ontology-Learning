@@ -18,8 +18,14 @@ public class IntGeometricDistribution implements IntDiscreteDistribution {
     private double q;
     private int offset;
 
-    public IntGeometricDistribution(double q, int offset){
-        this.q = q;
+    /**
+     * Constructor method, takes the probability of success and an offset.  The
+     * returned random variable is the number of failures plus the offset.
+     * @param p
+     * @param offset
+     */
+    public IntGeometricDistribution(double p, int offset){
+        q = 1.0 - p;
         this.offset = offset;
     }
 

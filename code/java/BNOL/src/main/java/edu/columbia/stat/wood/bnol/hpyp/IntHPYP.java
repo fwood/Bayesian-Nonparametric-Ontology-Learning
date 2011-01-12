@@ -9,16 +9,15 @@ import edu.columbia.stat.wood.bnol.util.IntDiscreteDistribution;
 import edu.columbia.stat.wood.bnol.util.IntUniformDiscreteDistribution;
 import edu.columbia.stat.wood.bnol.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.bnol.util.MutableDouble;
-import edu.columbia.stat.wood.bnol.util.Pair;
 import gnu.trove.iterator.TIntObjectIterator;
 import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.map.hash.TObjectIntHashMap;
-import gnu.trove.set.hash.THashSet;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import org.apache.commons.math.MathException;
 
 /**
  * Int based implementation of the fully instantiated HPYP.  Both contexts and
@@ -31,9 +30,7 @@ public class IntHPYP extends HPYP {
     private Restaurant ecr, root;
     private MutableDouble[] discounts;
     private MutableDouble[] concentrations;
-    private int depth;
     private GammaDistribution concentrationPrior;
-    //private ArrayList<Pair<int[], Integer>> drawHistory;
 
     /***********************constructor methods********************************/
 
@@ -45,11 +42,7 @@ public class IntHPYP extends HPYP {
      * @param baseDistribution base distribution
      * @param concentrationPrior prior on concentrations
      */
-    public IntHPYP(int depth, MutableDouble[] discounts, MutableDouble[] concentrations, IntDiscreteDistribution baseDistribution, GammaDistribution concentrationPrior) {
-        if (depth < 0) {
-            throw new IllegalArgumentException("depth must be >= 0");
-        }
-
+    public IntHPYP(MutableDouble[] discounts, MutableDouble[] concentrations, IntDiscreteDistribution baseDistribution, GammaDistribution concentrationPrior) {
         if (baseDistribution == null) {
             throw new IllegalArgumentException("base distribution must be specified");
         }
@@ -58,45 +51,26 @@ public class IntHPYP extends HPYP {
             throw new IllegalArgumentException("a prior for the concentration parameters must be specified");
         }
 
-        //default behavior is to have discounts and concentrations all be depth
-        //specific, unique to each depth in [0, depth]
-
-        if (discounts != null && concentrations != null && discounts.length == (depth + 1) && concentrations.length == (depth + 1)) {
+        if(discounts != null && discounts.length == 0){
             this.discounts = discounts;
+        } else {
+            this.discounts = new MutableDouble[]{new MutableDouble(0.5)};
+        }
+
+        if(concentrations != null && concentrations.length == 0){
             this.concentrations = concentrations;
         } else {
-            if (discounts == null) {
-                discounts = new MutableDouble[]{new MutableDouble(0.8)};
-            }
+            this.concentrations = new MutableDouble[]{new MutableDouble(8)};
+        }
 
-            if (concentrations == null) {
-                concentrations = new MutableDouble[]{new MutableDouble(0.5)};
-            }
-
-            this.discounts = new MutableDouble[depth + 1];
-            this.concentrations = new MutableDouble[depth + 1];
-
-            for (int i = 0; i <= depth; i++) {
-                if (i >= discounts.length) {
-                    this.discounts[i] = discounts[discounts.length - 1].deepCopy();
-                } else {
-                    this.discounts[i] = discounts[i];
-                }
-
-                if (i >= concentrations.length) {
-                    this.concentrations[i] = concentrations[concentrations.length - 1].deepCopy();
-                } else {
-                    this.concentrations[i] = concentrations[i];
-                }
-            }
+        if(this.concentrations.length != this.discounts.length){
+            throw new IllegalArgumentException("concentrations and discounts must have same length");
         }
 
         this.concentrationPrior = concentrationPrior;
-        this.depth = depth;
         root = new RootRestaurant(baseDistribution);
         ecr = new Restaurant(root, this.concentrations[0], this.discounts[0]);
         rng = new MersenneTwisterFast(3);
-        //drawHistory = new ArrayList<Pair<int[], Integer>>();
     }
 
     /***********************public methods*************************************/
@@ -144,23 +118,6 @@ public class IntHPYP extends HPYP {
         //drawHistory.add(new Pair(context, draw));
         return draw;
     }
-
-    /**
-     * {@inheritDoc}
-     */
-    /*public void commitDraw() {
-        drawHistory.clear();
-    }*/
-
-    /**
-     * {@inheritDoc}
-     */
-    /*public void revertDraw() {
-        for(Pair<int[], Integer> pair : drawHistory){
-            get(pair.first()).unseat(pair.second(), rng);
-        }
-        drawHistory.clear();
-    }*/
 
     /**
      * {@inheritDoc}
@@ -221,10 +178,10 @@ public class IntHPYP extends HPYP {
      * {@inheritDoc}
      */
     public double[] scoreByDepth(boolean withHyperParameters) {
-        double[] score = new double[depth + 1];
-
+        double[] score = new double[discounts.length];
+        
         if (withHyperParameters) {
-            for (int i = 0; i < (depth + 1); i++) {
+            for (int i = 0; i < (score.length); i++) {
                 score[i] = concentrationPrior.logProportionalToDensity(concentrations[i].value());
             }
         }
@@ -284,7 +241,7 @@ public class IntHPYP extends HPYP {
             return ecr;
         } else {
             int index = context.length - 1;
-            int restaurantDepth = depth < context.length ? depth : context.length;
+            int restaurantDepth = context.length;
             int currentDepth = 0;
             Restaurant child, current = ecr;
 
@@ -303,7 +260,7 @@ public class IntHPYP extends HPYP {
             while (currentDepth < restaurantDepth) {
                 currentDepth++;
 
-                child = new Restaurant(current, concentrations[currentDepth], discounts[currentDepth]);
+                child = new Restaurant(current, getConcentration(currentDepth), getDiscount(currentDepth));
                 current.put(context[index], child);
 
                 current = child;
@@ -311,6 +268,33 @@ public class IntHPYP extends HPYP {
             }
 
             return current;
+        }
+    }
+
+    /**
+     * Gets the discount object at the given depth.
+     * @param depth depth of discount desired
+     * @return discount at depth
+     */
+    private MutableDouble getDiscount(int depth){
+        if (depth >= discounts.length) {
+            return discounts[discounts.length -1];
+        } else {
+            return discounts[depth];
+        }
+    }
+
+    /**
+     * Gets the concentration object at the given depth.
+     * @param depth depth of concentration desired
+     * @return concentration at depth
+     * @throws MathException
+     */
+    private MutableDouble getConcentration(int depth){
+        if (depth >= concentrations.length){
+            return concentrations[concentrations.length - 1];
+        } else {
+            return concentrations[depth];
         }
     }
 
@@ -328,7 +312,11 @@ public class IntHPYP extends HPYP {
             scoreByDepth(iterator.value(), currentDepth + 1, score);
         }
 
-        score[currentDepth] += currentRestaurant.score();
+        if(currentDepth >= score.length){
+            score[score.length - 1] += currentRestaurant.score();
+        } else {
+            score[currentDepth] += currentRestaurant.score();
+        }
     }
 
     /**
@@ -406,13 +394,13 @@ public class IntHPYP extends HPYP {
         // get the current values
         double[] currentDiscounts = new double[discounts.length];
         double[] currentConcentrations = new double[concentrations.length];
-        for (int i = 0; i < (depth + 1); i++) {
+        for (int i = 0; i < discounts.length; i++) {
             currentDiscounts[i] = discounts[i].value();
             currentConcentrations[i] = concentrations[i].value();
         }
 
         // make proposals for discounts
-        for (int i = 0; i < (depth + 1); i++) {
+        for (int i = 0; i < discounts.length; i++) {
             discounts[i].plusEquals(stdDiscounts * rng.nextGaussian());
             if (discounts[i].value() >= 1.0 || discounts[i].value() <= 0.0) {
                 discounts[i].set(currentDiscounts[i]);
@@ -423,7 +411,7 @@ public class IntHPYP extends HPYP {
         double[] afterScore = scoreByDepth(true);
 
         // choose to accept or reject each proposal
-        for (int i = 0; i < (depth + 1); i++) {
+        for (int i = 0; i < discounts.length; i++) {
             double r = Math.exp(afterScore[i] - currentScore[i]);
 
             if (rng.nextDouble() < r) {
@@ -434,7 +422,7 @@ public class IntHPYP extends HPYP {
         }
 
         //make proposals for concentrations
-        for (int i = 0; i < (depth + 1); i++) {
+        for (int i = 0; i < discounts.length; i++) {
             concentrations[i].plusEquals(stdConcentrations * rng.nextGaussian());
             if (concentrations[i].value() <= 0.0) {
                 concentrations[i].set(currentConcentrations[i]);
@@ -446,7 +434,7 @@ public class IntHPYP extends HPYP {
 
         // choose to accept or reject each proposal
         double score = 0.0;
-        for (int i = 0; i < (depth + 1); i++) {
+        for (int i = 0; i < discounts.length; i++) {
             double r = Math.exp(afterScore[i] - currentScore[i]);
 
             if (rng.nextDouble() < r) {
@@ -482,14 +470,15 @@ public class IntHPYP extends HPYP {
         impliedData.put(thisContext, currentRestaurant.impliedData());
     }
     
+    /*
     public static void main(String[] args) throws IOException{
         File f = new File("/Users/nicholasbartlett/Documents/np_bayes/data/pride_and_prejudice/pride_and_prejudice.txt");
 
-        int depth = 2;
+        int depth = 5;
         int[] context = new int[depth];
 
         BufferedInputStream bis = null;
-        IntHPYP hpyp = new IntHPYP(depth, null, null, new IntUniformDiscreteDistribution(256), new GammaDistribution(1,100));
+        IntHPYP hpyp = new IntHPYP(null, null, new IntUniformDiscreteDistribution(256), new GammaDistribution(1,100));
 
         try{
             bis = new BufferedInputStream(new FileInputStream(f));
@@ -511,30 +500,31 @@ public class IntHPYP extends HPYP {
             //System.out.println(hpyp.ecr);
             //System.out.println(hpyp.ecr.size());
             System.out.println(hpyp.score(true));
-            for(int i = 0; i < 1; i++){
+            for(int i = 0; i < 10; i++){
                 System.out.println(hpyp.sample());
                 hpyp.printConcentrations();
                 hpyp.printDiscounts();
                 System.out.println("i = " + i + "\n");
             }
 
-            int length = 1000;
+            int length = 100;
             int[] sample = new int[length];
             for(int i = 0; i < length; i++){
                 context = new int[i];
                 System.arraycopy(sample,0, context, 0, i);
                 sample[i] = hpyp.generate(context);
             }
-            
-            for(int i = 0; i < 1; i++){
+
+            for(int i = 0; i < length; i++){
+                System.out.print((char) sample[i]);
+            }
+
+            hpyp.removeEmptyNodes();
+            for(int i = 0; i < 10; i++){
                 System.out.println(hpyp.sample());
                 hpyp.printConcentrations();
                 hpyp.printDiscounts();
                 System.out.println("i = " + i + "\n");
-            }
-
-            for(int i = 0; i < length; i++){
-                System.out.print((char) sample[i]);
             }
 
             System.out.println();
@@ -551,4 +541,5 @@ public class IntHPYP extends HPYP {
             bis.close();
         }
     }
+    */
 }

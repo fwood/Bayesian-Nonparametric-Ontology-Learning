@@ -311,8 +311,6 @@ public class S_EmissionDistribution {
             scalarScore += s;
         }
 
-        assert scalarScore == score() : "Scores which should mach up do not!";
-
         return scalarScore;
     }
 
@@ -367,7 +365,7 @@ public class S_EmissionDistribution {
 
         /***********************constructor methods****************************/
         public Node(){
-            super(1, discounts, concentrations, baseDist, concentrationPrior);
+            super(discounts, concentrations, baseDist, concentrationPrior);
         }
 
         /***********************public methods*********************************/

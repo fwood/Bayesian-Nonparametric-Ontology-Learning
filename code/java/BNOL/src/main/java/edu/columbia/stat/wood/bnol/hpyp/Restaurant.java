@@ -291,7 +291,7 @@ public class Restaurant extends TIntObjectHashMap<Restaurant> {
         }
 
         if(!isEmpty()){
-            assert customers == c;
+            assert customers == c : "customers = " + customers + ", c = " + c + ", size = " + size();
         }
 
         c = 0;

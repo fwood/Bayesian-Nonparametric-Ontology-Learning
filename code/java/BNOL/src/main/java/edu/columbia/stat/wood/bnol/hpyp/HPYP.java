@@ -5,9 +5,7 @@
 
 package edu.columbia.stat.wood.bnol.hpyp;
 
-import edu.columbia.stat.wood.bnol.util.Pair;
 import gnu.trove.map.hash.TObjectIntHashMap;
-import gnu.trove.set.hash.THashSet;
 
 /**
  * Abstract class to set up a nice interface for the HPYP object used in this
@@ -87,18 +85,6 @@ public abstract class HPYP {
     }
 
     /**
-     * Commits the customers created during the draw steps up until the previous
-     * commit or revert.
-     */
-    //abstract public void commitDraw();
-
-    /**
-     * Removes customers created during the draw steps up until the previous
-     * commit or revert.
-     */
-    //abstract public void revertDraw();
-
-    /**
      * Sample the seating arrangements a given number of times.
      * @param sweeps number of sweeps to pass through
      */
@@ -172,5 +158,4 @@ public abstract class HPYP {
      * @return map from contexts to counts
      */
     abstract public TObjectIntHashMap<int[]> getImpliedData();
-
 }

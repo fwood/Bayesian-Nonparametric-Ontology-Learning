@@ -6,7 +6,11 @@
 package edu.columbia.stat.wood.bnol;
 
 import edu.columbia.stat.wood.bnol.hpyp.HPYP;
+import edu.columbia.stat.wood.bnol.hpyp.IntHPYP;
+import edu.columbia.stat.wood.bnol.util.GammaDistribution;
+import edu.columbia.stat.wood.bnol.util.IntGeometricDistribution;
 import edu.columbia.stat.wood.bnol.util.MersenneTwisterFast;
+import edu.columbia.stat.wood.bnol.util.MutableDouble;
 import edu.columbia.stat.wood.bnol.util.SampleWithoutReplacement;
 import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.list.array.TIntArrayList;
@@ -26,6 +30,23 @@ public class Machine {
     private HPYP prior;
     private int key, H;
     private MersenneTwisterFast rng;
+
+    /***********************constructor methods********************************/
+
+    public Machine(int key, int H, double p){
+        this.key = key;
+        this.H = H;
+        rng = new MersenneTwisterFast(7);
+
+        // the number 11 here is totally arbitrary
+        MutableDouble[] discounts = new MutableDouble[11];
+        MutableDouble[] concentrations = new MutableDouble[11];
+        for(int i = 0; i < discounts.length; i++){
+            discounts[discounts.length - 1 - i] = new MutableDouble(Math.pow(0.9, i));
+            concentrations[i] = new MutableDouble(1.0);
+        }
+        prior = new IntHPYP(discounts, concentrations, new IntGeometricDistribution(p,1), new GammaDistribution(1,100));
+    }
 
     /***********************public methods*************************************/
 
@@ -47,7 +68,7 @@ public class Machine {
      * to give the output.
      * @param emissions trinary emissions
      * @param index index of time at which we want to get the next machine state
-     * @param indicateUsed if true then mark those delta entries which are used
+     * @param used if true then mark those delta entries which are used
      * @return next machine state
      */
     public int get(byte[][] emissions, int index, boolean used){
@@ -55,7 +76,7 @@ public class Machine {
         int contextLength = H < index ? H : index;
         
         for(int i = 0; i < contextLength; i++){
-            machineState = deltaGet(new StateEmissionPair(machineState, emissions[index - contextLength + i], used));
+            machineState = deltaGet(new StateEmissionPair(machineState, emissions[index - contextLength + i], used), used);
         }
 
         return machineState;
@@ -213,8 +234,9 @@ public class Machine {
      * @param key key to get
      * @return retrieved or generated value
      */
-    private int deltaGet(StateEmissionPair key){
+    private int deltaGet(StateEmissionPair key, boolean used){
         int value = delta.get(key);
+
         if(value == 0){
             byte[] emission = key.emission;
             int l = emission.length;
@@ -225,6 +247,9 @@ public class Machine {
 
             value = prior.draw(context);
             delta.put(key,value);
+        } else if(used){
+            key.used = true;
+            delta.put(key, value);
         }
         
         return value;
