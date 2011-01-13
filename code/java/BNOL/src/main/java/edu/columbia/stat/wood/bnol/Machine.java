@@ -42,7 +42,7 @@ public class Machine {
         MutableDouble[] discounts = new MutableDouble[11];
         MutableDouble[] concentrations = new MutableDouble[11];
         for(int i = 0; i < discounts.length; i++){
-            discounts[discounts.length - 1 - i] = new MutableDouble(Math.pow(0.9, i));
+            discounts[discounts.length - 1 - i] = new MutableDouble(Math.pow(0.9, i + 1));
             concentrations[i] = new MutableDouble(1.0);
         }
         prior = new IntHPYP(discounts, concentrations, new IntGeometricDistribution(p,1), new GammaDistribution(1,100));
@@ -54,7 +54,7 @@ public class Machine {
      * Gets the next machine state given the previous emissions.  Each machine
      * starts in a given start state (1) and then transitions deterministically
      * to give the output.
-     * @param emissions trinary emissions
+     * @param emissions emissions
      * @param index index of time at which we want to get the next machine state
      * @return next machine state
      */
@@ -66,7 +66,7 @@ public class Machine {
      * Gets the next machine state given the previous emissions.  Each machine
      * starts in a given start state (1) and then transitions deterministically
      * to give the output.
-     * @param emissions trinary emissions
+     * @param emissions emissions
      * @param index index of time at which we want to get the next machine state
      * @param used if true then mark those delta entries which are used
      * @return next machine state
@@ -87,7 +87,7 @@ public class Machine {
      * the HPYP being used as a prior on that delta matrix.
      * @param emissions entire set of emissions for data
      * @param machineKeys array of which machine is used at each step
-     * @param distributions map of all emission distributions for each machine state
+     * @param emissionDistributions emission distributions for each machine state
      * @param sweeps number of MH sweeps
      * @return joint log likelihood
      */
@@ -98,6 +98,7 @@ public class Machine {
         // get indices for this particular machine
         int[] indices = getIndices(machineKeys);
 
+        double logEvidence = 0;
         for (int sweep = 0; sweep < sweeps; sweep++) {
             // sample the prior hpyp 5 times, which is an arbitrary number
             for (int j = 0; j < 5; j++) {
@@ -120,7 +121,7 @@ public class Machine {
             }
 
             // go through each mapped key value pair and sample them
-            double logEvidence = logEvidence(emissions, emissionDistributions, indices);
+            logEvidence = logEvidence(emissions, emissionDistributions, indices);
             for (int j = 0; j < keys.length; j++) {
                 int[] context = keys[j].emission;
 
@@ -146,15 +147,22 @@ public class Machine {
             clean(emissions, machineKeys);
         }
 
-        return prior.sample();
+        if(sweeps > 0){
+            return prior.sample() + logEvidence;
+        } else {
+            return prior.sample() + logEvidence(emissions, emissionDistributions, indices);
+        }
     }
 
     /**
-     * Gets the joint score of the HPYP.
-     * @return joint log likelihood
+     * Gets the joint score of the HPYP and data.
+     * @param emissions emission data
+     * @param emissionDistributions emission distributions
+     * @param machineKeys machine keys for emissions
+     * @return score
      */
-    public double score(){
-        return prior.score(true);
+    public double score(int[][] emissions, S_EmissionDistribution emissionDistributions, int[] machineKeys){
+        return prior.score(true) + logEvidence(emissions, emissionDistributions, getIndices(machineKeys));
     }
 
     /**
