@@ -51,13 +51,13 @@ public class IntHPYP extends HPYP {
             throw new IllegalArgumentException("a prior for the concentration parameters must be specified");
         }
 
-        if(discounts != null && discounts.length == 0){
+        if(discounts != null && discounts.length != 0){
             this.discounts = discounts;
         } else {
             this.discounts = new MutableDouble[]{new MutableDouble(0.5)};
         }
 
-        if(concentrations != null && concentrations.length == 0){
+        if(concentrations != null && concentrations.length != 0){
             this.concentrations = concentrations;
         } else {
             this.concentrations = new MutableDouble[]{new MutableDouble(8)};
@@ -135,32 +135,32 @@ public class IntHPYP extends HPYP {
     /**
      * {@inheritDoc}
      */
-    public double sampleHyperParameters(int sweeps){
+    public double sampleHyperParameters(int sweeps, double temp){
         if(sweeps <= 0){
             throw new IllegalArgumentException("Sweeps must be positive");
         }
 
         for(int i = 1; i < sweeps; i++){
-            sampleHyperParams();
+            sampleHyperParams(temp);
         }
-        return sampleHyperParams();
+        return sampleHyperParams(temp);
     }
 
     /**
      * {@inheritDoc}
      */
-    public double sample(int sweeps){
+    public double sample(int sweeps, double temp){
         if(sweeps <= 0){
             throw new IllegalArgumentException("Sweeps must be positive");
         }
         
         for(int i = 1; i < sweeps; i++){
             sampleSeatingArrangements(1);
-            sampleHyperParams();
+            sampleHyperParams(temp);
         }
         
         sampleSeatingArrangements(1);
-        return sampleHyperParams();
+        return sampleHyperParams(temp);
     }
 
     /**
@@ -382,8 +382,8 @@ public class IntHPYP extends HPYP {
      * flat prior is assumed for the discount parameters.
      * @return joint log likelihood of model
      */
-    private double sampleHyperParams(){
-        double stdDiscounts = .01,stdConcentrations = .2;
+    private double sampleHyperParams(double temp){
+        double stdDiscounts = .07,stdConcentrations = .7;
         double[] currentScore = scoreByDepth(true);
 
         // get the current values
@@ -408,6 +408,7 @@ public class IntHPYP extends HPYP {
         // choose to accept or reject each proposal
         for (int i = 0; i < discounts.length; i++) {
             double r = Math.exp(afterScore[i] - currentScore[i]);
+            r = Math.pow(r < 1.0 ? r : 1.0, 1.0 / temp);
 
             if (rng.nextDouble() < r) {
                 currentScore[i] = afterScore[i];
@@ -431,6 +432,7 @@ public class IntHPYP extends HPYP {
         double score = 0.0;
         for (int i = 0; i < discounts.length; i++) {
             double r = Math.exp(afterScore[i] - currentScore[i]);
+            r = Math.pow(r < 1.0 ? r : 1.0, 1.0 / temp);
 
             if (rng.nextDouble() < r) {
                 score += afterScore[i];
@@ -444,7 +446,7 @@ public class IntHPYP extends HPYP {
     }
 
     /**
-     * Recursive function to get the imlied data in this HPYP object.
+     * Recursive function to get the implied data in this HPYP object.
      * @param currentRestaurant current restaurant of the recursion
      * @param impliedData implied data
      * @param thisContext context at current restaurant
@@ -467,13 +469,22 @@ public class IntHPYP extends HPYP {
     
     
     public static void main(String[] args) throws IOException{
-        File f = new File("/Users/nicholasbartlett/Documents/np_bayes/data/pride_and_prejudice/pride_and_prejudice.txt");
+        File f = new File("/Users/nicholasbartlett/Documents/np_bayes/data/alice_in_wonderland/alice_in_wonderland.txt");
 
         int depth = 5;
         int[] context = new int[depth];
 
         BufferedInputStream bis = null;
-        IntHPYP hpyp = new IntHPYP(null, null, new IntUniformDiscreteDistribution(256), new GammaDistribution(1,100));
+
+        MutableDouble[] conc = new MutableDouble[6];
+        MutableDouble[] disc = new MutableDouble[6];
+
+        for(int i = 0; i < disc.length; i++){
+            disc[disc.length - 1 - i] = new MutableDouble(Math.pow(0.9, i + 1));
+            conc[i] = new MutableDouble(1.0);
+        }
+
+        IntHPYP hpyp = new IntHPYP(disc, conc, new IntUniformDiscreteDistribution(256), new GammaDistribution(1,100));
 
         try{
             bis = new BufferedInputStream(new FileInputStream(f));
@@ -496,13 +507,45 @@ public class IntHPYP extends HPYP {
             //System.out.println(hpyp.ecr.size());
             System.out.println(hpyp.score(true));
             for(int i = 0; i < 25; i++){
-                System.out.println(hpyp.sample());
+                System.out.println(hpyp.sample(1000));
+            }
+            hpyp.printConcentrations();
+            hpyp.printDiscounts();
+
+            for(int i = 0; i < 25; i++){
+                System.out.println(hpyp.sample(100));
+            }
+            hpyp.printConcentrations();
+            hpyp.printDiscounts();
+
+            for(int i = 0; i < 25; i++){
+                System.out.println(hpyp.sample(10));
+            }
+            hpyp.printConcentrations();
+            hpyp.printDiscounts();
+
+            for(int i = 0; i < 100; i++){
+                System.out.println(hpyp.sample(1));
+            }
+            hpyp.printConcentrations();
+            hpyp.printDiscounts();
+
+            /*
+            for(int i = 0; i < 10; i++){
+                System.out.println(hpyp.sample(1));
                 hpyp.printConcentrations();
                 hpyp.printDiscounts();
                 System.out.println("i = " + i + "\n");
             }
 
-            int length = 1000;
+            for(int i = 0; i < 10; i++){
+                System.out.println(hpyp.sample(1));
+                hpyp.printConcentrations();
+                hpyp.printDiscounts();
+                System.out.println("i = " + i + "\n");
+            }*/
+
+            int length = 100;
             int[] sample = new int[length];
             for(int i = 0; i < length; i++){
                 context = new int[i];
@@ -517,13 +560,14 @@ public class IntHPYP extends HPYP {
                 System.out.print((char) sample[i]);
             }
 
+            /*
             hpyp.removeEmptyNodes();
             for(int i = 0; i < 2; i++){
                 System.out.println(hpyp.sample());
                 hpyp.printConcentrations();
                 hpyp.printDiscounts();
                 System.out.println("i = " + i + "\n");
-            }
+            }*/
 
             System.out.println();
             TObjectIntHashMap<int[]> impliedData = hpyp.getImpliedData();
@@ -534,7 +578,6 @@ public class IntHPYP extends HPYP {
                 System.out.print(Arrays.toString(iterator.key()) + ", ");
                 System.out.println(iterator.value());
             }
-
         } finally {
             bis.close();
         }

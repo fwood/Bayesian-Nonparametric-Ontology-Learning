@@ -100,33 +100,37 @@ public abstract class HPYP {
     /**
      * Sample concentration and discount parameters a given number of times.
      * @param sweeps number of sweeps to pass through
+     * @param temp temperature parameter
      * @return joint log likelihood
      */
-    abstract public double sampleHyperParameters(int sweeps);
+    abstract public double sampleHyperParameters(int sweeps, double temp);
 
     /**
      * Sample concentration and discount parameters once.
+     * @param temp temperature parameter
      * @return joint log likelihood
      */
-    public double sampleHyperParameters(){
-        return sampleHyperParameters(1);
+    public double sampleHyperParameters(double temp){
+        return sampleHyperParameters(1, temp);
     }
 
     /**
      * Sample seating arrangements intermittently with the concentrations and
      * discount parameters a given number of times.
      * @param sweeps number of sweeps to pass through
+     * @param temp temperature parameter
      * @return joint log likelihood
      */
-    abstract public double sample(int sweeps);
+    abstract public double sample(int sweeps, double temp);
 
     /**
      * Sample seating arrangements intermittently with the concentrations and
      * discount parameters once.
+     * @param temp temperature parameter
      * @return joint log likelihood
      */
-    public double sample(){
-        return sample(1);
+    public double sample(double temp){
+        return sample(1, temp);
     }
 
     /**
