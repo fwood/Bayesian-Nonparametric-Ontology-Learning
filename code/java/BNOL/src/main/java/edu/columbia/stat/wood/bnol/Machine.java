@@ -26,7 +26,7 @@ import java.util.Arrays;
  */
 public class Machine {
 
-    private TObjectIntHashMap<StateEmissionPair> delta;
+    private TObjectIntHashMap<StateEmissionPair> delta = new TObjectIntHashMap();
     private HPYP prior;
     private int key, H;
     private MersenneTwisterFast rng;
@@ -92,11 +92,11 @@ public class Machine {
      * @return joint log likelihood
      */
     public double sample(int[][] emissions, int[] machineKeys, S_EmissionDistribution emissionDistributions, int sweeps) {
-        // clean delta matrix first
-        clean(emissions, machineKeys);
-
         // get indices for this particular machine
         int[] indices = getIndices(machineKeys);
+
+        // clean delta matrix first
+        clean(emissions, indices);
 
         double logEvidence = 0;
         for (int sweep = 0; sweep < sweeps; sweep++) {
@@ -144,7 +144,7 @@ public class Machine {
             }
 
             // clean the delta matrix
-            clean(emissions, machineKeys);
+            clean(emissions, indices);
         }
 
         if(sweeps > 0){
@@ -168,10 +168,9 @@ public class Machine {
     /**
      * Removes from the delta map any entries which are not used given the data.
      * @param emissions emission data
-     * @param machineKeys indicator of which machine is being used at each time step
+     * @param indices indices of emission from this machine
      */
-    public void clean(int[][] emissions, int[] machineKeys){
-        int[] indices = getIndices(machineKeys);
+    public void clean(int[][] emissions, int[] indices){
         for(int i = 0; i < indices.length; i++){
             get(emissions, indices[i], true);
         }

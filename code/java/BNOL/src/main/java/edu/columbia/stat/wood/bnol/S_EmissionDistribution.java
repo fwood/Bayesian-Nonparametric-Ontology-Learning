@@ -395,30 +395,31 @@ public class S_EmissionDistribution {
         }
     }
 
-    /*
+    
     public static void main(String[] args) {
         S_EmissionDistribution ed = new S_EmissionDistribution(new MutableDouble(0.3));
 
-        int[] emission = ed.generate(0, 0.0, 1.0);
+        double low = 0.35, high = 0.36;
+        int[] emission = ed.generate(0, low, high);
         System.out.println(Arrays.toString(emission));
 
-        emission = ed.generate(0, 0.0, 1.0);
+        emission = ed.generate(0, low, high);
         System.out.println(Arrays.toString(emission));
 
-        emission = ed.generate(0, 0.0, 1.0);
+        emission = ed.generate(0, low, high);
         System.out.println(Arrays.toString(emission));
 
-        emission = ed.generate(0, 0.0, 1.0);
+        emission = ed.generate(0, low, high);
         System.out.println(Arrays.toString(emission));
 
-        emission = ed.generate(0, 0.0, 1.0);
+        emission = ed.generate(0, low, high);
         System.out.println(Arrays.toString(emission));
 
-
+/*
         for(int i = 0; i < 100; i++){
             emission = ed.generate(1, 0.0, 1.0);
             System.out.println(Arrays.toString(emission));
             System.out.println(Math.exp(ed.logProbability(0, emission)));
-        }
-    }    */
+        }*/
+    }    
 }
