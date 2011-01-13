@@ -11,6 +11,8 @@ import edu.columbia.stat.wood.bnol.util.IntTreeDiscreteDistribution;
 import edu.columbia.stat.wood.bnol.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.bnol.util.MutableDouble;
 import gnu.trove.list.array.TByteArrayList;
+import gnu.trove.list.array.TIntArrayList;
+import java.util.Arrays;
 
 /**
  * Emission distribution for the latent binary state variables used in BNOL.
@@ -23,7 +25,7 @@ public class S_EmissionDistribution {
     private IntTreeDiscreteDistribution baseDist;
     private MutableDouble[] discounts, concentrations;
     private GammaDistribution concentrationPrior;
-    private MersenneTwisterFast RNG = new MersenneTwisterFast(5);
+    private MersenneTwisterFast rng = new MersenneTwisterFast(5);
     
     /***********************constructor methods********************************/
 
@@ -49,14 +51,14 @@ public class S_EmissionDistribution {
     /**
      * Gets the log probability of a given emission s from a given machine state.
      * @param machineState given machine state
-     * @param s emitted s value, byte vector of 0,1, and 2
+     * @param s emitted s value, int vector of 0,1, and 2
      * @return log probability of s in context of machineState
      */
-    public double logProbability(int machineState, byte[] s){
+    public double logProbability(int machineState, int[] s){
 
-        assert(s[s.length-1] == 2) : "last element of s must be 2";
+        assert(s[s.length-1] == -1) : "last element of s must be -1";
 
-        int[] context = new int[machineState];
+        int[] context = new int[]{machineState};
         Node currentNode = baseNode;
         int index = 0;
 
@@ -78,19 +80,18 @@ public class S_EmissionDistribution {
      * @param high high edge of slice
      * @return sampled vector
      */
-    public byte[] generate(int machineState, double low, double high){
-        TByteArrayList out = new TByteArrayList();
+    public int[] generate(int machineState, double low, double high){
+        TIntArrayList out = new TIntArrayList();
 
         int[] context = new int[]{machineState};
-        int[] keyOrder = new int[]{0,1,2};
 
         Node currentNode = baseNode;
         
-        int emission = -1;
+        int emission;
         double cuSum, cuSumLast;
-        double randomNumber = RNG.nextDouble() * (high - low) + low;
+        double randomNumber = rng.nextDouble() * (high - low) + low;
         while(true){
-            emission = -1;
+            emission = -2;
             cuSum = 0.0;
             cuSumLast = cuSum;
             for(int i = 0; i < 3; i++){
@@ -103,12 +104,12 @@ public class S_EmissionDistribution {
 
             assert cuSum > randomNumber;
 
-            out.add((byte) emission);
+            out.add(emission);
 
-            if (emission == 2) {
+            if (emission == -1) {
                 break;
             } else {
-                currentNode = currentNode.get((byte) emission);
+                currentNode = currentNode.get(emission);
 
                 // shift numbers based on expansion of section chosen
                 double expandFactor = 1.0 / (cuSum - cuSumLast);
@@ -122,7 +123,7 @@ public class S_EmissionDistribution {
             }
         }
 
-        assert emission == 2;
+        assert emission == -1;
         
         return out.toArray();
     }
@@ -133,8 +134,8 @@ public class S_EmissionDistribution {
      * @param machineState machine state
      * @param s emission
      */
-    public void seat(int machineState, byte[] s){
-        assert s[s.length - 1] == 2 : "last element of s should be 2";
+    public void seat(int machineState, int[] s){
+        assert s[s.length - 1] == -1 : "last element of s should be 2";
 
         int[] context = new int[]{machineState};
         int index = 0;
@@ -153,8 +154,8 @@ public class S_EmissionDistribution {
      * @param machineState machine state
      * @param s emission
      */
-    public void unseat(int machineState, byte[] s){
-        assert s[s.length - 1] == 2 : "last element of s should be 2";
+    public void unseat(int machineState, int[] s){
+        assert s[s.length - 1] == -1 : "last element of s should be 2";
 
         int[] context = new int[]{machineState};
         int index = 0;
@@ -257,13 +258,13 @@ public class S_EmissionDistribution {
     private double sampleHyperParameters(){
         double[] c = new double[]{concentrations[0].value(), concentrations[1].value()};
         double[] d = new double[]{discounts[0].value(), discounts[1].value()};
-        double stdDiscounts = .01, stdConcentrations = .2;
+        double stdDiscounts = .01, stdConcentrations = .2, r;
 
         double[] score = scoreByDepth();
 
         // propose for discounts
         for (int i = 0; i < 2; i++) {
-            discounts[i].plusEquals(stdDiscounts * RNG.nextGaussian());
+            discounts[i].plusEquals(stdDiscounts * rng.nextGaussian());
             if (discounts[i].value() <= 0.0 || discounts[i].value() >= 1.0) {
                 discounts[i].set(d[i]);
             }
@@ -274,7 +275,9 @@ public class S_EmissionDistribution {
 
         // accept for discounts
         for(int i = 0; i < 2; i++){
-            if(RNG.nextBoolean(Math.exp(proposedScore[i] - score[i]))){
+            r = Math.exp(proposedScore[i] - score[i]);
+            r = r < 1.0 ? r : 1.0;
+            if(rng.nextBoolean(r)){
                 score[i] = proposedScore[i];
             } else {
                 discounts[i].set(d[i]);
@@ -283,7 +286,7 @@ public class S_EmissionDistribution {
 
         // propose for concentrations
         for (int i = 0; i < 2; i++){
-            concentrations[i].plusEquals(stdConcentrations * RNG.nextGaussian());
+            concentrations[i].plusEquals(stdConcentrations * rng.nextGaussian());
             if(concentrations[i].value() <= 0.0){
                 concentrations[i].set(c[i]);
             }
@@ -294,7 +297,9 @@ public class S_EmissionDistribution {
 
         // accept for concentrations
         for(int i = 0; i < 2; i++){
-            if(RNG.nextBoolean(Math.exp(proposedScore[i] - score[i]))){
+            r = Math.exp(proposedScore[i] - score[i]);
+            r = r < 1.0 ? r : 1.0;
+            if(rng.nextBoolean(r)){
                 score[i] = proposedScore[i];
             } else {
                 concentrations[i].set(c[i]);
@@ -306,8 +311,6 @@ public class S_EmissionDistribution {
         for(double s : score){
             scalarScore += s;
         }
-
-        assert scalarScore == score() : "Scores which should mach up do not!";
 
         return scalarScore;
     }
@@ -363,7 +366,7 @@ public class S_EmissionDistribution {
 
         /***********************constructor methods****************************/
         public Node(){
-            super(1, discounts, concentrations, baseDist, concentrationPrior);
+            super(discounts, concentrations, baseDist, concentrationPrior);
         }
 
         /***********************public methods*********************************/
@@ -375,7 +378,7 @@ public class S_EmissionDistribution {
          * @param key 0 or 1 key corresponding to left and right children
          * @return child
          */
-        public Node get(byte key){
+        public Node get(int key){
             if(key == 0){
                 if(left == null){
                     left = new Node();
@@ -396,7 +399,7 @@ public class S_EmissionDistribution {
     public static void main(String[] args) {
         S_EmissionDistribution ed = new S_EmissionDistribution(new MutableDouble(0.3));
 
-        byte[] emission = ed.generate(0, 0.0, 1.0);
+        int[] emission = ed.generate(0, 0.0, 1.0);
         System.out.println(Arrays.toString(emission));
 
         emission = ed.generate(0, 0.0, 1.0);
@@ -417,6 +420,5 @@ public class S_EmissionDistribution {
             System.out.println(Arrays.toString(emission));
             System.out.println(Math.exp(ed.logProbability(0, emission)));
         }
-    }
-     */
+    }    */
 }
