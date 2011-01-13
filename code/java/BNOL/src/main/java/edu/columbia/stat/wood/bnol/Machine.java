@@ -102,7 +102,7 @@ public class Machine {
         for (int sweep = 0; sweep < sweeps; sweep++) {
             // sample the prior hpyp 5 times, which is an arbitrary number
             for (int j = 0; j < 5; j++) {
-                prior.sample();
+                prior.sample(1.0);
             }
             
             // copy the keys and values of the current delta matrix for sampling
@@ -148,9 +148,9 @@ public class Machine {
         }
 
         if(sweeps > 0){
-            return prior.sample() + logEvidence;
+            return prior.sample(1.0) + logEvidence;
         } else {
-            return prior.sample() + logEvidence(emissions, emissionDistributions, indices);
+            return prior.sample(1.0) + logEvidence(emissions, emissionDistributions, indices);
         }
     }
 
