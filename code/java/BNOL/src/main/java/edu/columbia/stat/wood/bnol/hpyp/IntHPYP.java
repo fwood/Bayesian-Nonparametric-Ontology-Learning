@@ -240,13 +240,12 @@ public class IntHPYP extends HPYP {
         if (context == null || context.length == 0) {
             return ecr;
         } else {
-            int index = context.length - 1;
             int restaurantDepth = context.length;
             int currentDepth = 0;
             Restaurant child, current = ecr;
 
             while (currentDepth < restaurantDepth) {
-                child = current.get(context[index]);
+                child = current.get(context[currentDepth]);
 
                 if (child == null) {
                     break;
@@ -254,17 +253,13 @@ public class IntHPYP extends HPYP {
 
                 current = child;
                 currentDepth++;
-                index--;
             }
 
             while (currentDepth < restaurantDepth) {
-                currentDepth++;
-
-                child = new Restaurant(current, getConcentration(currentDepth), getDiscount(currentDepth));
-                current.put(context[index], child);
+                child = new Restaurant(current, getConcentration(currentDepth + 1), getDiscount(currentDepth + 1));
+                current.put(context[currentDepth++], child);
 
                 current = child;
-                index--;
             }
 
             return current;
@@ -470,7 +465,7 @@ public class IntHPYP extends HPYP {
         impliedData.put(thisContext, currentRestaurant.impliedData());
     }
     
-    /*
+    
     public static void main(String[] args) throws IOException{
         File f = new File("/Users/nicholasbartlett/Documents/np_bayes/data/pride_and_prejudice/pride_and_prejudice.txt");
 
@@ -484,34 +479,37 @@ public class IntHPYP extends HPYP {
             bis = new BufferedInputStream(new FileInputStream(f));
 
             for(int i = 0; i < depth; i++){
-                context[i] = bis.read();
+                context[depth - i -1] = bis.read();
             }
 
             int next;
             while((next = bis.read()) > -1){
                 hpyp.seat(context, next);
 
-                for(int i = 1; i < depth; i++){
-                    context[i-1] = context[i];
+                for(int i = depth - 1; i > 0; i--){
+                    context[i] = context[i - 1];
                 }
-                context[depth-1] = next;
+                context[0] = next;
             }
             //System.out.println(hpyp.root);
             //System.out.println(hpyp.ecr);
             //System.out.println(hpyp.ecr.size());
             System.out.println(hpyp.score(true));
-            for(int i = 0; i < 10; i++){
+            for(int i = 0; i < 25; i++){
                 System.out.println(hpyp.sample());
                 hpyp.printConcentrations();
                 hpyp.printDiscounts();
                 System.out.println("i = " + i + "\n");
             }
 
-            int length = 100;
+            int length = 1000;
             int[] sample = new int[length];
             for(int i = 0; i < length; i++){
                 context = new int[i];
-                System.arraycopy(sample,0, context, 0, i);
+                for(int j = 0; j < i; j++){
+                    context[j] = sample[i - 1 - j];
+                }
+
                 sample[i] = hpyp.generate(context);
             }
 
@@ -520,7 +518,7 @@ public class IntHPYP extends HPYP {
             }
 
             hpyp.removeEmptyNodes();
-            for(int i = 0; i < 10; i++){
+            for(int i = 0; i < 2; i++){
                 System.out.println(hpyp.sample());
                 hpyp.printConcentrations();
                 hpyp.printDiscounts();
@@ -541,5 +539,5 @@ public class IntHPYP extends HPYP {
             bis.close();
         }
     }
-    */
+    
 }

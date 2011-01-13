@@ -25,8 +25,8 @@ public class IntTreeDiscreteDistribution implements IntDiscreteDistribution {
 
     /**
      * Finds the probability of the given type.  Types with positive probability
-     * are 0, 1 , and 2.  A 0 indicates a left turn down the tree, a 1 indicates
-     * a right turn and a 2 indicates that the emission stops at that given
+     * are 0, 1 , and -1.  A 0 indicates a left turn down the tree, a 1 indicates
+     * a right turn and a -1 indicates that the emission stops at that given
      * node.
      * @param type type to find probability of
      * @return probability of given type
@@ -34,10 +34,10 @@ public class IntTreeDiscreteDistribution implements IntDiscreteDistribution {
     public double probability(int type) {
         if(type == 0 || type == 1){
             return (1.0 - b.value()) / 2.0;
-        } else if (type == 2){
+        } else if (type == -1){
             return b.value();
         } else {
-            throw new IllegalArgumentException("Type must be 0, 1, or 2, not " + type);
+            throw new IllegalArgumentException("Type must be 0, 1, or -1, not " + type);
         }
     }
 
@@ -46,9 +46,9 @@ public class IntTreeDiscreteDistribution implements IntDiscreteDistribution {
      */
     public int generate(MersenneTwisterFast rng){
         double randomNumber = rng.nextDouble(), cuSum = 0.0;
-        int sample = -1;
+        int sample = -2;
 
-        while(cuSum <= randomNumber && sample < 3){
+        while(cuSum <= randomNumber && sample < 2){
             cuSum += probability(++sample);
         }
 
@@ -70,7 +70,7 @@ public class IntTreeDiscreteDistribution implements IntDiscreteDistribution {
     /***********************private classes************************************/
     
     private class IT implements Iterator<Pair<Integer, Double>> {
-        private int calls = 0;
+        private int calls = -1;
         private double db = b.value();
     
         /***********************public methods*********************************/
@@ -80,7 +80,7 @@ public class IntTreeDiscreteDistribution implements IntDiscreteDistribution {
          * @return true if there is another object, else false
          */
         public boolean hasNext() {
-            return calls < 3;
+            return calls < 2;
         }
 
         /**
@@ -88,7 +88,7 @@ public class IntTreeDiscreteDistribution implements IntDiscreteDistribution {
          * @return the next pair
          */
         public Pair<Integer, Double> next() {
-            if(calls < 3){
+            if(calls < 2){
                 return new Pair(calls,probability(calls++));
             } else {
                 throw new RuntimeException("No more values to iterator over");

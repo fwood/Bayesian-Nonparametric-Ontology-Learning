@@ -58,7 +58,7 @@ public class Machine {
      * @param index index of time at which we want to get the next machine state
      * @return next machine state
      */
-    public int get(byte[][] emissions, int index){
+    public int get(int[][] emissions, int index){
         return get(emissions, index, false);
     }
 
@@ -71,7 +71,7 @@ public class Machine {
      * @param used if true then mark those delta entries which are used
      * @return next machine state
      */
-    public int get(byte[][] emissions, int index, boolean used){
+    public int get(int[][] emissions, int index, boolean used){
         int machineState = 1; 
         int contextLength = H < index ? H : index;
         
@@ -91,7 +91,7 @@ public class Machine {
      * @param sweeps number of MH sweeps
      * @return joint log likelihood
      */
-    public double sample(byte[][] emissions, int[] machineKeys, S_EmissionDistribution emissionDistributions, int sweeps) {
+    public double sample(int[][] emissions, int[] machineKeys, S_EmissionDistribution emissionDistributions, int sweeps) {
         // clean delta matrix first
         clean(emissions, machineKeys);
 
@@ -122,12 +122,7 @@ public class Machine {
             // go through each mapped key value pair and sample them
             double logEvidence = logEvidence(emissions, emissionDistributions, indices);
             for (int j = 0; j < keys.length; j++) {
-                byte[] emission = keys[j].emission;
-                int l = emission.length;
-                int[] context = new int[l];
-                for (int k = 0; k < l; k++) {
-                    context[k] = emission[l - k - 1];
-                }
+                int[] context = keys[j].emission;
 
                 prior.unseat(context, values[j]);
                 int proposal = prior.draw(context);
@@ -167,7 +162,7 @@ public class Machine {
      * @param emissions emission data
      * @param machineKeys indicator of which machine is being used at each time step
      */
-    public void clean(byte[][] emissions, int[] machineKeys){
+    public void clean(int[][] emissions, int[] machineKeys){
         int[] indices = getIndices(machineKeys);
         for(int i = 0; i < indices.length; i++){
             get(emissions, indices[i], true);
@@ -189,15 +184,8 @@ public class Machine {
         TObjectIntIterator<StateEmissionPair> iterator = delta.iterator();
         while(iterator.hasNext()){
             iterator.advance();
-
-            byte[] emission = iterator.key().emission;
-            int l = emission.length;
-            int[] context = new int[l];
-            for(int i = 0; i < l; i++){
-                context[i] = emission[l - i - 1];
-            }
-
-            data.adjustValue(context, -1);
+            
+            data.adjustValue(iterator.key().emission, -1);
         }
 
         TObjectIntIterator<int[]> iterator1 = data.iterator();
@@ -238,14 +226,7 @@ public class Machine {
         int value = delta.get(key);
 
         if(value == 0){
-            byte[] emission = key.emission;
-            int l = emission.length;
-            int[] context = new int[l];
-            for(int i = 0; i < l; i++){
-                context[i] = emission[l - i - 1];
-            }
-
-            value = prior.draw(context);
+            value = prior.draw(key.emission);
             delta.put(key,value);
         } else if(used){
             key.used = true;
@@ -263,7 +244,7 @@ public class Machine {
      * @param indices indices where this machine is used
      * @return log evidence
      */
-    private double logEvidence(byte[][] emissions, S_EmissionDistribution emissionDistributions, int[] indices){
+    private double logEvidence(int[][] emissions, S_EmissionDistribution emissionDistributions, int[] indices){
         double logEvidence = 0.0;
 
         for(int i = 0; i < indices.length; i++){
@@ -280,7 +261,7 @@ public class Machine {
      */
     private class StateEmissionPair {
         int state;
-        byte[] emission;
+        int[] emission;
         boolean used;
 
         /***********************constructor methods****************************/
@@ -290,7 +271,7 @@ public class Machine {
          * @param state state
          * @param emission emission
          */
-        public StateEmissionPair(int state, byte[] emission, boolean used){
+        public StateEmissionPair(int state, int[] emission, boolean used){
 
             assert(emission[emission.length-1] == 2) : "last element of s must be 2";
 
@@ -346,14 +327,7 @@ public class Machine {
          */
         public boolean execute(StateEmissionPair key, int machineState) {
             if(!key.used){
-                byte[] emission = key.emission;
-                int l = emission.length;
-                int[] context = new int[l];
-                for(int i = 0; i < l; i++){
-                    context[i] = emission[l - i - 1];
-                }
-
-                prior.unseat(context,machineState);
+                prior.unseat(key.emission,machineState);
                 return false;
             } else {
                 key.used = false;
