@@ -1,0 +1,9 @@
+#!/bin/csh
+cd ..
+~/Applications/wget -r http://childes.psy.cmu.edu/data/Eng-USA/ -l 1
+cd scripts
+find ../childes.psy.cmu.edu/ -name '*.zip' -exec unzip -d ../ {} \;
+cd ..
+find . -name '*.cha' -exec cat {} \; | grep "MOT\|PAT\|LOI" | grep -v "\@" | cut -f 2 > _CHILDES.raw.txt
+rm -r [A-W]*
+cd scripts

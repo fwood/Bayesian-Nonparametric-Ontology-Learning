@@ -1,3 +1,13 @@
+Sections:
+
+------- Getting data ---------------
+
+cd into ./data/scripts
+execute ./getCHILDESdata
+
+
+------- Setting up GIT -------------
+
 Global setup:
  Download and install Git
   git config --global user.name "Your Name"
