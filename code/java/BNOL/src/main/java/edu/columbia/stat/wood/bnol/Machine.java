@@ -89,9 +89,10 @@ public class Machine {
      * @param machineKeys array of which machine is used at each step
      * @param emissionDistributions emission distributions for each machine state
      * @param sweeps number of MH sweeps
+     * @param temp temperature of sampling steps
      * @return joint log likelihood
      */
-    public double sample(int[][] emissions, int[] machineKeys, S_EmissionDistribution emissionDistributions, int sweeps) {
+    public double sample(int[][] emissions, int[] machineKeys, S_EmissionDistribution emissionDistributions, int sweeps, double temp) {
         // get indices for this particular machine
         int[] indices = getIndices(machineKeys);
 
@@ -132,7 +133,7 @@ public class Machine {
                 double proposedLogEvidence = logEvidence(emissions, emissionDistributions, indices);
 
                 double r = Math.exp(proposedLogEvidence - logEvidence);
-                r = r < 1.0 ? r : 1.0;
+                r = Math.pow(r < 1.0 ? r : 1.0, 1.0 / temp);
                 
                 if (rng.nextBoolean(r)) {
                     logEvidence = proposedLogEvidence;
@@ -148,9 +149,9 @@ public class Machine {
         }
 
         if(sweeps > 0){
-            return prior.sample(1.0) + logEvidence;
+            return prior.sample(temp);
         } else {
-            return prior.sample(1.0) + logEvidence(emissions, emissionDistributions, indices);
+            return prior.sample(temp);
         }
     }
 
@@ -280,7 +281,7 @@ public class Machine {
          */
         public StateEmissionPair(int state, int[] emission, boolean used){
 
-            assert(emission[emission.length-1] == 2) : "last element of s must be 2";
+            assert(emission[emission.length-1] == -1) : "last element of s must be -1";
 
             this.used = used;
             this.state = state;

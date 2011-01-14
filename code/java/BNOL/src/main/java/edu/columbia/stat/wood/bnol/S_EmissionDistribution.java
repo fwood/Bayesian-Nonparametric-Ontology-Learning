@@ -10,6 +10,7 @@ import edu.columbia.stat.wood.bnol.util.GammaDistribution;
 import edu.columbia.stat.wood.bnol.util.IntTreeDiscreteDistribution;
 import edu.columbia.stat.wood.bnol.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.bnol.util.MutableDouble;
+import edu.columbia.stat.wood.bnol.util.Pair;
 import gnu.trove.list.array.TByteArrayList;
 import gnu.trove.list.array.TIntArrayList;
 import java.util.Arrays;
@@ -80,7 +81,7 @@ public class S_EmissionDistribution {
      * @param high high edge of slice
      * @return sampled vector
      */
-    public int[] generate(int machineState, double low, double high){
+    public Pair<int[], Double> generate(int machineState, double low, double high){
         TIntArrayList out = new TIntArrayList();
 
         int[] context = new int[]{machineState};
@@ -125,7 +126,7 @@ public class S_EmissionDistribution {
 
         assert emission == -1;
         
-        return out.toArray();
+        return new Pair(out.toArray(), randomNumber);
     }
 
     /**
@@ -181,15 +182,16 @@ public class S_EmissionDistribution {
      * Samples all the HPYP objects in the tree a given number times and returns
      * the joint log likelihood of the data and model.
      * @param sweeps number of Gibb's sweeps
+     * @param temp temperature of sampling steps
      * @return joint log likelihood
      */
-    public double sample(int sweeps){
+    public double sample(int sweeps, double temp){
         for(int i = 0; i < (sweeps - 1); i++){
             sampleSeatingArrangements(baseNode);
-            sampleHyperParameters();
+            sampleHyperParameters(temp);
         }
         sampleSeatingArrangements(baseNode);
-        return sampleHyperParameters();
+        return sampleHyperParameters(temp);
     }
 
     /**
@@ -253,9 +255,10 @@ public class S_EmissionDistribution {
 
     /**
      * Samples the hyper parameters.
+     * @param temp temperature of sampling
      * @return joint score of the whole tree
      */
-    private double sampleHyperParameters(){
+    private double sampleHyperParameters(double temp){
         double[] c = new double[]{concentrations[0].value(), concentrations[1].value()};
         double[] d = new double[]{discounts[0].value(), discounts[1].value()};
         double stdDiscounts = .01, stdConcentrations = .2, r;
@@ -276,7 +279,7 @@ public class S_EmissionDistribution {
         // accept for discounts
         for(int i = 0; i < 2; i++){
             r = Math.exp(proposedScore[i] - score[i]);
-            r = r < 1.0 ? r : 1.0;
+            r = Math.pow(r < 1.0 ? r : 1.0, 1.0 / temp);
             if(rng.nextBoolean(r)){
                 score[i] = proposedScore[i];
             } else {
@@ -298,7 +301,7 @@ public class S_EmissionDistribution {
         // accept for concentrations
         for(int i = 0; i < 2; i++){
             r = Math.exp(proposedScore[i] - score[i]);
-            r = r < 1.0 ? r : 1.0;
+            r = Math.pow(r < 1.0 ? r : 1.0, 1.0 / temp);
             if(rng.nextBoolean(r)){
                 score[i] = proposedScore[i];
             } else {
@@ -395,7 +398,8 @@ public class S_EmissionDistribution {
         }
     }
 
-    
+
+    /*
     public static void main(String[] args) {
         S_EmissionDistribution ed = new S_EmissionDistribution(new MutableDouble(0.3));
 
@@ -414,12 +418,5 @@ public class S_EmissionDistribution {
 
         emission = ed.generate(0, low, high);
         System.out.println(Arrays.toString(emission));
-
-/*
-        for(int i = 0; i < 100; i++){
-            emission = ed.generate(1, 0.0, 1.0);
-            System.out.println(Arrays.toString(emission));
-            System.out.println(Math.exp(ed.logProbability(0, emission)));
-        }*/
-    }    
+    }    */
 }

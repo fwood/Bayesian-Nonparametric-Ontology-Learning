@@ -36,7 +36,6 @@ public class IntHPYP extends HPYP {
 
     /**
      * Constructor method.
-     * @param depth depth of tree
      * @param discounts array of depth specific discounts
      * @param concentrations array of depth specific concentrations
      * @param baseDistribution base distribution
@@ -115,7 +114,6 @@ public class IntHPYP extends HPYP {
      */
     public int draw(int[] context, double low, double high, int[] keyOrder) {
         int draw = get(context).draw(low, high, keyOrder, rng);
-        //drawHistory.add(new Pair(context, draw));
         return draw;
     }
 

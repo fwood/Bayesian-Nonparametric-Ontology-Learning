@@ -28,6 +28,10 @@ public abstract class HPYP {
      */
     abstract public double prob(int[] context, int type);
 
+    public double prob(int context, int type){
+        return prob(new int[]{context}, type);
+    }
+
     /**
      * Seat the given type in the given context.
      * @param context context in which to seat type
@@ -35,12 +39,20 @@ public abstract class HPYP {
      */
     abstract public void seat(int[] context, int type);
 
+    public void seat(int context, int type){
+        seat(new int[]{context}, type);
+    }
+
     /**
      * Unseat the given type in the given context.
      * @param context context in which to unseat
      * @param type type to unseat
      */
     abstract public void unseat(int[] context, int type);
+
+    public void unseat(int context, int type){
+        unseat(new int[]{context}, type);
+    }
 
     /**
      * Generates a random sample from the predictive distribution at the node
@@ -53,6 +65,10 @@ public abstract class HPYP {
      */
     abstract public int generate(int[] context, double low, double high, int[] keyOrder);
 
+    public int generate(int context, double low, double high, int[] keyOrder){
+        return generate(new int[]{context}, low, high, keyOrder);
+    }
+
     /**
      * Draws a random sample from the predictive distribution at the node
      * indexed by the given context and updates counts in the underlying object.
@@ -64,6 +80,10 @@ public abstract class HPYP {
      */
     abstract public int draw(int[] context, double low, double high, int[] keyOrder);
 
+    public int draw(int context, double low, double high, int[] keyOrder){
+        return draw(new int[]{context}, low, high, keyOrder);
+    }
+
     /**
      * Generates a random sample from the predictive distribution at the node
      * indexed by the given context.
@@ -72,6 +92,10 @@ public abstract class HPYP {
      */
     public int generate(int[] context){
         return generate(context, 0.0, 1.0, null);
+    }
+
+    public int generate(int context){
+        return generate(new int[]{context});
     }
     
     /**
@@ -82,6 +106,10 @@ public abstract class HPYP {
      */
     public int draw(int[] context){
         return draw(context, 0.0, 1.0, null);
+    }
+
+    public int draw(int context){
+        return draw(new int[]{context});
     }
 
     /**

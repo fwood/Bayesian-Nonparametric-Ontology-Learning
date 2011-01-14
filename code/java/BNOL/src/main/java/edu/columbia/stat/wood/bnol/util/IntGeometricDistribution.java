@@ -67,7 +67,7 @@ public class IntGeometricDistribution implements IntDiscreteDistribution {
 
     private class GeoIterator implements Iterator<Pair<Integer,Double>> {
 
-        private IntGeometricDistribution geoDist = new IntGeometricDistribution(q, offset);
+        private IntGeometricDistribution geoDist = new IntGeometricDistribution(1.0 - q, offset);
         private int next = 0 + offset;
 
         public boolean hasNext() {
