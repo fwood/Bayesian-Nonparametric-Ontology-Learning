@@ -11,9 +11,7 @@ import edu.columbia.stat.wood.bnol.util.IntTreeDiscreteDistribution;
 import edu.columbia.stat.wood.bnol.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.bnol.util.MutableDouble;
 import edu.columbia.stat.wood.bnol.util.Pair;
-import gnu.trove.list.array.TByteArrayList;
 import gnu.trove.list.array.TIntArrayList;
-import java.util.Arrays;
 
 /**
  * Emission distribution for the latent binary state variables used in BNOL.
@@ -40,8 +38,24 @@ public class S_EmissionDistribution {
             throw new IllegalArgumentException("b must be in 0 - 1");
         }
 
-        discounts = new MutableDouble[]{new MutableDouble(0.3), new MutableDouble(0.8)};
-        concentrations = new MutableDouble[]{new MutableDouble(8.0), new MutableDouble(1.0)};
+        //discounts = new MutableDouble[]{new MutableDouble(0.8), new MutableDouble(0.9)};
+        //concentrations = new MutableDouble[]{new MutableDouble(8.0), new MutableDouble(1.0)};
+
+        discounts = new MutableDouble[]{new MutableDouble(.4), new MutableDouble(0.8)};
+        concentrations = new MutableDouble[]{new MutableDouble(10), new MutableDouble(1)};
+
+        concentrationPrior = new GammaDistribution(1.0,100.0);
+        baseDist = new IntTreeDiscreteDistribution(b);
+        baseNode = new Node();
+    }
+
+    public S_EmissionDistribution(MutableDouble b, double d0, double d1, double c0, double c1){
+        if(b.value() > 1.0 || b.value() < 0.0){
+            throw new IllegalArgumentException("b must be in 0 - 1");
+        }
+
+        discounts = new MutableDouble[]{new MutableDouble(d0), new MutableDouble(d1)};
+        concentrations = new MutableDouble[]{new MutableDouble(c0), new MutableDouble(c1)};
         concentrationPrior = new GammaDistribution(1.0,100.0);
         baseDist = new IntTreeDiscreteDistribution(b);
         baseNode = new Node();
@@ -52,30 +66,25 @@ public class S_EmissionDistribution {
     /**
      * Gets the log probability of a given emission s from a given machine state.
      * @param machineState given machine state
-     * @param s emitted s value, int vector of 0,1, and 2
+     * @param s emitted s value, int vector of 0,1
      * @return log probability of s in context of machineState
      */
     public double logProbability(int machineState, int[] s){
-
-        assert(s[s.length-1] == -1) : "last element of s must be -1";
-
         int[] context = new int[]{machineState};
         Node currentNode = baseNode;
-        int index = 0;
 
-        double logProbability = Math.log(currentNode.prob(context, s[index]));
-        while(index < (s.length - 1)){
-            currentNode = currentNode.get(s[index]);
-            logProbability += Math.log(currentNode.prob(context, s[++index]));
+        double logProbability = 0d;
+        for(int i = 0; i < s.length; i++){
+            logProbability += Math.log(currentNode.prob(context, s[i]));
+            currentNode = currentNode.get(s[i]);
         }
-        
-        return logProbability;
+
+        return logProbability + Math.log(currentNode.prob(context, -1));
     }
 
     /**
-     * Generate a binary state vector (actually trinary because they all end
-     * with a 2) from the appropriate emission distribution given the machine
-     * state and using the slice provided.
+     * Generate a binary state vector from the appropriate emission distribution
+     * given the machine state and using the slice provided.
      * @param machineState machine state
      * @param low low edge of slice
      * @param high high edge of slice
@@ -105,11 +114,10 @@ public class S_EmissionDistribution {
 
             assert cuSum > randomNumber;
 
-            out.add(emission);
-
             if (emission == -1) {
                 break;
             } else {
+                out.add(emission);
                 currentNode = currentNode.get(emission);
 
                 // shift numbers based on expansion of section chosen
@@ -136,17 +144,15 @@ public class S_EmissionDistribution {
      * @param s emission
      */
     public void seat(int machineState, int[] s){
-        assert s[s.length - 1] == -1 : "last element of s should be 2";
-
         int[] context = new int[]{machineState};
-        int index = 0;
         Node currentNode = baseNode;
 
-        currentNode.seat(context, s[index]);
-        while(index < (s.length - 1)){
-            currentNode = currentNode.get(s[index]);
-            currentNode.seat(context, s[++index]);
+        for (int i = 0; i < s.length; i++){
+            currentNode.seat(context, s[i]);
+            currentNode = currentNode.get(s[i]);
         }
+
+        currentNode.seat(context, -1);
     }
 
     /**
@@ -156,17 +162,15 @@ public class S_EmissionDistribution {
      * @param s emission
      */
     public void unseat(int machineState, int[] s){
-        assert s[s.length - 1] == -1 : "last element of s should be 2";
-
         int[] context = new int[]{machineState};
-        int index = 0;
         Node currentNode = baseNode;
 
-        currentNode.unseat(context, s[index]);
-        while(index < (s.length - 1)){
-            currentNode = currentNode.get(s[index]);
-            currentNode.unseat(context, s[++index]);
+        for (int i = 0; i < s.length; i++){
+            currentNode.unseat(context, s[i]);
+            currentNode = currentNode.get(s[i]);
         }
+
+        currentNode.unseat(context, -1);
     }
 
     /**
@@ -191,6 +195,8 @@ public class S_EmissionDistribution {
             sampleHyperParameters(temp);
         }
         sampleSeatingArrangements(baseNode);
+        System.out.print(discounts[0].value() + ", " + discounts[1].value() +
+                ", " + concentrations[0].value() + ", " + concentrations[1].value() + ", ");
         return sampleHyperParameters(temp);
     }
 
@@ -261,10 +267,10 @@ public class S_EmissionDistribution {
     private double sampleHyperParameters(double temp){
         double[] c = new double[]{concentrations[0].value(), concentrations[1].value()};
         double[] d = new double[]{discounts[0].value(), discounts[1].value()};
-        double stdDiscounts = .01, stdConcentrations = .2, r;
+        double stdDiscounts = .05, stdConcentrations = 3, r;
 
         double[] score = scoreByDepth();
-
+        
         // propose for discounts
         for (int i = 0; i < 2; i++) {
             discounts[i].plusEquals(stdDiscounts * rng.nextGaussian());
@@ -280,13 +286,13 @@ public class S_EmissionDistribution {
         for(int i = 0; i < 2; i++){
             r = Math.exp(proposedScore[i] - score[i]);
             r = Math.pow(r < 1.0 ? r : 1.0, 1.0 / temp);
-            if(rng.nextBoolean(r)){
+            if(rng.nextDouble() < r){
                 score[i] = proposedScore[i];
             } else {
                 discounts[i].set(d[i]);
             }
         }
-
+        
         // propose for concentrations
         for (int i = 0; i < 2; i++){
             concentrations[i].plusEquals(stdConcentrations * rng.nextGaussian());
@@ -302,7 +308,7 @@ public class S_EmissionDistribution {
         for(int i = 0; i < 2; i++){
             r = Math.exp(proposedScore[i] - score[i]);
             r = Math.pow(r < 1.0 ? r : 1.0, 1.0 / temp);
-            if(rng.nextBoolean(r)){
+            if(rng.nextDouble() < r){
                 score[i] = proposedScore[i];
             } else {
                 concentrations[i].set(c[i]);
@@ -401,22 +407,22 @@ public class S_EmissionDistribution {
 
     /*
     public static void main(String[] args) {
-        S_EmissionDistribution ed = new S_EmissionDistribution(new MutableDouble(0.3));
+        S_EmissionDistribution ed = new S_EmissionDistribution(new MutableDouble(0.1));
 
-        double low = 0.35, high = 0.36;
-        int[] emission = ed.generate(0, low, high);
-        System.out.println(Arrays.toString(emission));
-
-        emission = ed.generate(0, low, high);
-        System.out.println(Arrays.toString(emission));
+        double low = 0.7, high = 0.8;
+        Pair<int[], Double> emission = ed.generate(0, low, high);
+        System.out.println(Arrays.toString(emission.first()));
 
         emission = ed.generate(0, low, high);
-        System.out.println(Arrays.toString(emission));
+        System.out.println(Arrays.toString(emission.first()));
 
         emission = ed.generate(0, low, high);
-        System.out.println(Arrays.toString(emission));
+        System.out.println(Arrays.toString(emission.first()));
 
         emission = ed.generate(0, low, high);
-        System.out.println(Arrays.toString(emission));
+        System.out.println(Arrays.toString(emission.first()));
+
+        emission = ed.generate(0, low, high);
+        System.out.println(Arrays.toString(emission.first()));
     }    */
 }

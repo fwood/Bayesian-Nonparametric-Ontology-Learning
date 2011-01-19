@@ -4,19 +4,19 @@
  */
 package edu.columbia.stat.wood.bnol.hpyp;
 
+import edu.columbia.stat.wood.bnol.util.Context;
 import edu.columbia.stat.wood.bnol.util.GammaDistribution;
 import edu.columbia.stat.wood.bnol.util.IntDiscreteDistribution;
 import edu.columbia.stat.wood.bnol.util.IntUniformDiscreteDistribution;
 import edu.columbia.stat.wood.bnol.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.bnol.util.MutableDouble;
+import edu.columbia.stat.wood.bnol.util.MutableInt;
 import gnu.trove.iterator.TIntObjectIterator;
-import gnu.trove.iterator.TObjectIntIterator;
-import gnu.trove.map.hash.TObjectIntHashMap;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.HashMap;
 import org.apache.commons.math.MathException;
 
 /**
@@ -199,8 +199,8 @@ public class IntHPYP extends HPYP {
     /**
      * {@inheritDoc}
      */
-    public TObjectIntHashMap<int[]> getImpliedData(){
-        TObjectIntHashMap<int[]> impliedData = new TObjectIntHashMap();
+    public HashMap<Context, MutableInt> getImpliedData(){
+        HashMap<Context, MutableInt> impliedData = new HashMap();
         getImpliedData(ecr, impliedData, new int[0]);
         return impliedData;
     }
@@ -408,7 +408,7 @@ public class IntHPYP extends HPYP {
             double r = Math.exp(afterScore[i] - currentScore[i]);
             r = Math.pow(r < 1.0 ? r : 1.0, 1.0 / temp);
 
-            if (rng.nextDouble() < r) {
+            if (rng.nextBoolean(r)) {
                 currentScore[i] = afterScore[i];
             } else {
                 discounts[i].set(currentDiscounts[i]);
@@ -432,7 +432,7 @@ public class IntHPYP extends HPYP {
             double r = Math.exp(afterScore[i] - currentScore[i]);
             r = Math.pow(r < 1.0 ? r : 1.0, 1.0 / temp);
 
-            if (rng.nextDouble() < r) {
+            if (rng.nextBoolean(r)) {
                 score += afterScore[i];
             } else {
                 score += currentScore[i];
@@ -449,8 +449,7 @@ public class IntHPYP extends HPYP {
      * @param impliedData implied data
      * @param thisContext context at current restaurant
      */
-    private void getImpliedData(Restaurant currentRestaurant, TObjectIntHashMap<int[]> impliedData, int[] thisContext){
-        
+    private void getImpliedData(Restaurant currentRestaurant, HashMap<Context, MutableInt> impliedData, int[] thisContext){
         TIntObjectIterator<Restaurant> iterator = currentRestaurant.iterator();
         while(iterator.hasNext()){
             iterator.advance();
@@ -461,21 +460,24 @@ public class IntHPYP extends HPYP {
 
             getImpliedData(iterator.value(), impliedData, childContext);
         }
-        
-        impliedData.put(thisContext, currentRestaurant.impliedData());
+
+        int count = currentRestaurant.impliedData();
+        if(count > 0){
+            impliedData.put(new Context(thisContext), new MutableInt(count));
+        }
     }
     
     
     public static void main(String[] args) throws IOException{
         File f = new File("/Users/nicholasbartlett/Documents/np_bayes/data/alice_in_wonderland/alice_in_wonderland.txt");
 
-        int depth = 5;
+        int depth = 1;
         int[] context = new int[depth];
 
         BufferedInputStream bis = null;
 
-        MutableDouble[] conc = new MutableDouble[6];
-        MutableDouble[] disc = new MutableDouble[6];
+        MutableDouble[] conc = new MutableDouble[depth + 1];
+        MutableDouble[] disc = new MutableDouble[depth + 1];
 
         for(int i = 0; i < disc.length; i++){
             disc[disc.length - 1 - i] = new MutableDouble(Math.pow(0.9, i + 1));
@@ -503,7 +505,8 @@ public class IntHPYP extends HPYP {
             //System.out.println(hpyp.root);
             //System.out.println(hpyp.ecr);
             //System.out.println(hpyp.ecr.size());
-            System.out.println(hpyp.score(true));
+
+            /*System.out.println(hpyp.score(true));
             for(int i = 0; i < 25; i++){
                 System.out.println(hpyp.sample(1000));
             }
@@ -520,10 +523,14 @@ public class IntHPYP extends HPYP {
                 System.out.println(hpyp.sample(10));
             }
             hpyp.printConcentrations();
-            hpyp.printDiscounts();
+            hpyp.printDiscounts();*/
 
-            for(int i = 0; i < 100; i++){
-                System.out.println(hpyp.sample(1));
+            hpyp.printConcentrations();
+            hpyp.printDiscounts();
+            for(int i = 0; i < 1000; i++){
+                //System.out.println(hpyp.sample(1));
+                hpyp.sampleSeatingArrangements();
+                System.out.println(hpyp.score(true));
             }
             hpyp.printConcentrations();
             hpyp.printDiscounts();
@@ -567,15 +574,8 @@ public class IntHPYP extends HPYP {
                 System.out.println("i = " + i + "\n");
             }*/
 
-            System.out.println();
-            TObjectIntHashMap<int[]> impliedData = hpyp.getImpliedData();
-            System.out.println(impliedData.size());
-            TObjectIntIterator<int[]> iterator = impliedData.iterator();
-            for(int i = 0; i < 100; i++){
-                iterator.advance();
-                System.out.print(Arrays.toString(iterator.key()) + ", ");
-                System.out.println(iterator.value());
-            }
+            
+            
         } finally {
             bis.close();
         }

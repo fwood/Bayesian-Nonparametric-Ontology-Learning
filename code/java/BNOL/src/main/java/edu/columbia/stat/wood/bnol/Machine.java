@@ -7,16 +7,17 @@ package edu.columbia.stat.wood.bnol;
 
 import edu.columbia.stat.wood.bnol.hpyp.HPYP;
 import edu.columbia.stat.wood.bnol.hpyp.IntHPYP;
+import edu.columbia.stat.wood.bnol.util.Context;
 import edu.columbia.stat.wood.bnol.util.GammaDistribution;
 import edu.columbia.stat.wood.bnol.util.IntGeometricDistribution;
 import edu.columbia.stat.wood.bnol.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.bnol.util.MutableDouble;
+import edu.columbia.stat.wood.bnol.util.MutableInt;
 import edu.columbia.stat.wood.bnol.util.SampleWithoutReplacement;
-import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.list.array.TIntArrayList;
-import gnu.trove.map.hash.TObjectIntHashMap;
-import gnu.trove.procedure.TObjectIntProcedure;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map.Entry;
 
 /**
  * Object to represent the complex deterministic program used to generate the
@@ -26,7 +27,7 @@ import java.util.Arrays;
  */
 public class Machine {
 
-    private TObjectIntHashMap<StateEmissionPair> delta = new TObjectIntHashMap();
+    private HashMap<StateEmissionPair, MutableInt> delta = new HashMap();
     private HPYP prior;
     private int key, H;
     private MersenneTwisterFast rng;
@@ -42,7 +43,7 @@ public class Machine {
         MutableDouble[] discounts = new MutableDouble[11];
         MutableDouble[] concentrations = new MutableDouble[11];
         for(int i = 0; i < discounts.length; i++){
-            discounts[discounts.length - 1 - i] = new MutableDouble(Math.pow(0.9, i + 1));
+            discounts[discounts.length - 1 - i] = new MutableDouble(Math.pow(0.7, i + 1));
             concentrations[i] = new MutableDouble(1.0);
         }
         prior = new IntHPYP(discounts, concentrations, new IntGeometricDistribution(p,1), new GammaDistribution(1,100));
@@ -59,27 +60,7 @@ public class Machine {
      * @return next machine state
      */
     public int get(int[][] emissions, int index){
-        return get(emissions, index, false);
-    }
-
-    /**
-     * Gets the next machine state given the previous emissions.  Each machine
-     * starts in a given start state (1) and then transitions deterministically
-     * to give the output.
-     * @param emissions emissions
-     * @param index index of time at which we want to get the next machine state
-     * @param used if true then mark those delta entries which are used
-     * @return next machine state
-     */
-    public int get(int[][] emissions, int index, boolean used){
-        int machineState = 1; 
-        int contextLength = H < index ? H : index;
-        
-        for(int i = 0; i < contextLength; i++){
-            machineState = deltaGet(new StateEmissionPair(machineState, emissions[index - contextLength + i], used), used);
-        }
-
-        return machineState;
+        return get(emissions, index, null);
     }
 
     /**
@@ -103,32 +84,30 @@ public class Machine {
         for (int sweep = 0; sweep < sweeps; sweep++) {
             // sample the prior hpyp 5 times, which is an arbitrary number
             for (int j = 0; j < 5; j++) {
-                prior.sample(1.0);
+                prior.sample(temp);
             }
             
             // copy the keys and values of the current delta matrix for sampling
             StateEmissionPair[] keys = new StateEmissionPair[delta.size()];
-            int[] values = new int[delta.size()];
+            MutableInt[] values = new MutableInt[delta.size()];
 
             int i = 0;
             int[] randomIndex = SampleWithoutReplacement.sampleWithoutReplacement(delta.size(), rng);
 
-            TObjectIntIterator<StateEmissionPair> iterator = delta.iterator();
-            while (iterator.hasNext()) {
-                iterator.advance();
-
-                keys[randomIndex[i]] = iterator.key();
-                values[randomIndex[i++]] = iterator.value();
+            for(Entry<StateEmissionPair, MutableInt> entry : delta.entrySet()){
+                keys[randomIndex[i]] = entry.getKey();
+                values[randomIndex[i++]] = entry.getValue();
             }
 
             // go through each mapped key value pair and sample them
             logEvidence = logEvidence(emissions, emissionDistributions, indices);
             for (int j = 0; j < keys.length; j++) {
                 int[] context = keys[j].emission;
+                int currentValue = values[j].value();
 
-                prior.unseat(context, values[j]);
+                prior.unseat(context, currentValue);
                 int proposal = prior.draw(context);
-                delta.put(keys[j], proposal);
+                values[j].set(proposal);
                 
                 double proposedLogEvidence = logEvidence(emissions, emissionDistributions, indices);
 
@@ -136,23 +115,33 @@ public class Machine {
                 r = Math.pow(r < 1.0 ? r : 1.0, 1.0 / temp);
                 
                 if (rng.nextBoolean(r)) {
+                    prior.unseat(context, proposal);
+                    prior.seat(context, currentValue);
+                    values[j].set(currentValue);
+                    int[] oldMachineKeys = getAllMachineState(emissions, indices);
+
+                    prior.unseat(context, currentValue);
+                    prior.seat(context, proposal);
+                    values[j].set(proposal);
+                    int[] newMachineKeys = getAllMachineState(emissions, indices);
+
+                    adjustEmissionsDistributions(oldMachineKeys, newMachineKeys, emissionDistributions, emissions, indices);
+
                     logEvidence = proposedLogEvidence;
                 } else {
                     prior.unseat(context, proposal);
-                    prior.seat(context, values[j]);
-                    delta.put(keys[j], values[j]);
+                    prior.seat(context, currentValue);
+                    values[j].set(currentValue);
                 }
             }
+
+            assert checkCounts();
 
             // clean the delta matrix
             clean(emissions, indices);
         }
 
-        if(sweeps > 0){
-            return prior.sample(temp);
-        } else {
-            return prior.sample(temp);
-        }
+        return prior.sample(temp);
     }
 
     /**
@@ -172,11 +161,19 @@ public class Machine {
      * @param indices indices of emission from this machine
      */
     public void clean(int[][] emissions, int[] indices){
+        HashMap<StateEmissionPair, MutableInt> newDelta = new HashMap();
+
         for(int i = 0; i < indices.length; i++){
-            get(emissions, indices[i], true);
+            get(emissions, indices[i], newDelta);
         }
 
-        delta.retainEntries(new StateEmissionPairUnseat());
+        for(StateEmissionPair deltaKey : delta.keySet()){
+            if(newDelta.get(deltaKey) == null){
+                prior.unseat(deltaKey.emission, delta.get(deltaKey).value());
+            }
+        }
+
+        delta = newDelta;
         prior.removeEmptyNodes();
     }
 
@@ -187,19 +184,14 @@ public class Machine {
      */
     public boolean checkCounts(){
         prior.removeEmptyNodes();
-        TObjectIntHashMap<int[]> data = prior.getImpliedData();
-        
-        TObjectIntIterator<StateEmissionPair> iterator = delta.iterator();
-        while(iterator.hasNext()){
-            iterator.advance();
-            
-            data.adjustValue(iterator.key().emission, -1);
+        HashMap<Context, MutableInt> data = prior.getImpliedData();
+
+        for(StateEmissionPair deltaKey : delta.keySet()){
+            data.get(new Context(deltaKey.emission)).decrement();
         }
 
-        TObjectIntIterator<int[]> iterator1 = data.iterator();
-        while(iterator1.hasNext()){
-            iterator1.advance();
-            if(iterator1.value() != 0){
+        for(MutableInt value : data.values()){
+            if(value.value() != 0){
                 return false;
             }
         }
@@ -208,6 +200,46 @@ public class Machine {
     }
 
     /***********************private methods************************************/
+
+    private int[] getAllMachineState(int[][] emissions, int[] indices){
+        int[] machineStates = new int[indices.length];
+
+        for(int i = 0; i++ < indices.length;){
+            machineStates[i] = get(emissions, indices[i]);
+        }
+
+        return machineStates;
+    }
+
+    private void adjustEmissionsDistributions(int[] oldMachineStates, int[] newMachineStates, S_EmissionDistribution emissionDistributions, int[][] emissions, int[] indices){
+        assert oldMachineStates.length == newMachineStates.length;
+        for(int i = 0; i++ < oldMachineStates.length;){
+            if(oldMachineStates[i] != newMachineStates[i]){
+                emissionDistributions.unseat(oldMachineStates[i], emissions[indices[i]]);
+                emissionDistributions.seat(newMachineStates[i], emissions[indices[i]]);
+            }
+        }
+    }
+
+    /**
+     * Gets the next machine state given the previous emissions.  Each machine
+     * starts in a given start state (1) and then transitions deterministically
+     * to give the output.
+     * @param emissions emissions
+     * @param index index of time at which we want to get the next machine state
+     * @param newDelta hash map for new delta if this is during a cleaning step
+     * @return next machine state
+     */
+    private int get(int[][] emissions, int index, HashMap<StateEmissionPair, MutableInt> newDelta){
+        int machineState = 1;
+        int contextLength = H < index ? H : index;
+
+        for(int i = 0; i < contextLength; i++){
+            machineState = deltaGet(new StateEmissionPair(machineState, emissions[index - contextLength + i]), newDelta);
+        }
+
+        return machineState;
+    }
 
     /**
      * Gets the indices into the argument arrays which pertain to this machine.
@@ -228,20 +260,22 @@ public class Machine {
      * Does a get from the delta map, but if nothing is found it makes a draw
      * from the prior and adds it to the map.
      * @param key key to get
+     * @param newDelta hash map for new delta if this is during a cleaning step
      * @return retrieved or generated value
      */
-    private int deltaGet(StateEmissionPair key, boolean used){
-        int value = delta.get(key);
+    private int deltaGet(StateEmissionPair key, HashMap<StateEmissionPair, MutableInt> newDelta){
+        MutableInt value = delta.get(key);
 
-        if(value == 0){
-            value = prior.draw(key.emission);
-            delta.put(key,value);
-        } else if(used){
-            key.used = true;
-            delta.put(key, value);
+        if(value == null){
+            int machineState = prior.draw(key.emission);
+            delta.put(key,value = new MutableInt(machineState));
+        }
+
+        if(newDelta != null){
+            newDelta.put(key, value);
         }
         
-        return value;
+        return value.value();
     }
 
     /**
@@ -270,7 +304,6 @@ public class Machine {
     private class StateEmissionPair {
         int state;
         int[] emission;
-        boolean used;
 
         /***********************constructor methods****************************/
 
@@ -279,11 +312,8 @@ public class Machine {
          * @param state state
          * @param emission emission
          */
-        public StateEmissionPair(int state, int[] emission, boolean used){
+        public StateEmissionPair(int state, int[] emission){
 
-            assert(emission[emission.length-1] == -1) : "last element of s must be -1";
-
-            this.used = used;
             this.state = state;
             this.emission = emission;
         }
@@ -317,30 +347,6 @@ public class Machine {
             hash = 37 * hash + this.state;
             hash = 37 * hash + Arrays.hashCode(this.emission);
             return hash;
-        }
-    }
-
-    /**
-     * Class to implement a procedure used for cleaning the delta map.
-     */
-    private class StateEmissionPairUnseat implements TObjectIntProcedure<StateEmissionPair> {
-
-        /**
-         * If the state emission pair is not being used it is removed from the
-         * map and un-seated in the prior.  If it is being used it is retained
-         * in the map, though used is set to false for future iterations.
-         * @param key key
-         * @param machineState machine state
-         * @return true if retained in the map
-         */
-        public boolean execute(StateEmissionPair key, int machineState) {
-            if(!key.used){
-                prior.unseat(key.emission,machineState);
-                return false;
-            } else {
-                key.used = false;
-                return true;
-            }
         }
     }
 }

@@ -104,6 +104,8 @@ public class Restaurant extends TIntObjectHashMap<Restaurant> {
     public void unseat(int type, MersenneTwisterFast rng){
         TSA tsa = tableArrangements.get(type);
 
+        assert tsa != null : "type = " + type;
+
         if(tsa.unseat(rng)){
             tables--;
             parent.unseat(type,rng);
@@ -284,7 +286,7 @@ public class Restaurant extends TIntObjectHashMap<Restaurant> {
     public boolean checkCounts(){
         int c = 0, t = 0;
         
-        TIntObjectIterator<Restaurant> iterator = this.iterator();
+        /*TIntObjectIterator<Restaurant> iterator = this.iterator();
         while(iterator.hasNext()){
             iterator.advance();
             c += iterator.value().tables;
@@ -294,7 +296,7 @@ public class Restaurant extends TIntObjectHashMap<Restaurant> {
             assert customers == c : "customers = " + customers + ", c = " + c + ", size = " + size();
         }
 
-        c = 0;
+        c = 0;*/
 
         for(TSA tsa : tableArrangements.valueCollection()){
             tsa.checkCounts();

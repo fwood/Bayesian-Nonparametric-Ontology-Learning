@@ -56,6 +56,14 @@ public class MutableInt implements Serializable{
     }
 
     /**
+     * Adds increment to the underlying value.
+     * @param increment amount to add
+     */
+    public void plusEquals(int increment){
+        i += increment;
+    }
+
+    /**
      * Overrides hash code to only reflect underlying int value.
      * @return hash code
      */

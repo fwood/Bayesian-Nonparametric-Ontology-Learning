@@ -5,7 +5,9 @@
 
 package edu.columbia.stat.wood.bnol.hpyp;
 
-import gnu.trove.map.hash.TObjectIntHashMap;
+import edu.columbia.stat.wood.bnol.util.Context;
+import edu.columbia.stat.wood.bnol.util.MutableInt;
+import java.util.HashMap;
 
 /**
  * Abstract class to set up a nice interface for the HPYP object used in this
@@ -189,5 +191,5 @@ public abstract class HPYP {
      * restaurant and it's children nodes.
      * @return map from contexts to counts
      */
-    abstract public TObjectIntHashMap<int[]> getImpliedData();
+    abstract public HashMap<Context, MutableInt> getImpliedData();
 }
