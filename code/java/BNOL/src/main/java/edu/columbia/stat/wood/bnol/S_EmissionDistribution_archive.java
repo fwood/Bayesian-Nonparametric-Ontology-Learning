@@ -19,7 +19,7 @@ import gnu.trove.list.array.TIntArrayList;
  * @author nicholasbartlett
  */
 
-public class S_EmissionDistribution {
+public class S_EmissionDistribution_archive {
 
     private Node baseNode;
     private IntTreeDiscreteDistribution baseDist;
@@ -34,23 +34,20 @@ public class S_EmissionDistribution {
      * be changed if these are not working well.
      * @param b initial b used as the base distribution on the emissions at each node
      */
-    public S_EmissionDistribution(MutableDouble b){
+    public S_EmissionDistribution_archive(MutableDouble b){
         if(b.value() > 1.0 || b.value() < 0.0){
             throw new IllegalArgumentException("b must be in 0 - 1");
         }
 
-        //discounts = new MutableDouble[]{new MutableDouble(0.8), new MutableDouble(0.9)};
-        //concentrations = new MutableDouble[]{new MutableDouble(8.0), new MutableDouble(1.0)};
-
-        discounts = new MutableDouble[]{new MutableDouble(.4), new MutableDouble(0.8)};
-        concentrations = new MutableDouble[]{new MutableDouble(10), new MutableDouble(1)};
+        discounts = new MutableDouble[]{new MutableDouble(0.8), new MutableDouble(0.9)};
+        concentrations = new MutableDouble[]{new MutableDouble(8.0), new MutableDouble(1.0)};
 
         concentrationPrior = new GammaDistribution(1.0,100.0);
         baseDist = new IntTreeDiscreteDistribution(b);
         baseNode = new Node();
     }
 
-    public S_EmissionDistribution(MutableDouble b, double d0, double d1, double c0, double c1){
+    public S_EmissionDistribution_archive(MutableDouble b, double d0, double d1, double c0, double c1){
         if(b.value() > 1.0 || b.value() < 0.0){
             throw new IllegalArgumentException("b must be in 0 - 1");
         }
@@ -463,3 +460,4 @@ public class S_EmissionDistribution {
         System.out.println(Arrays.toString(emission.first()));
     }    */
 }
+

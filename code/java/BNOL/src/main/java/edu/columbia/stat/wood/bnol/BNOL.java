@@ -84,7 +84,7 @@ public class BNOL {
      */
     public BNOL(int[] words, int alphabetSize, int H, double b, double pForMachineStates, double pForMachineTransitions){
         machines = new TIntObjectHashMap();
-        emissionDistributions = new S_EmissionDistribution(new MutableDouble(b), .1, .2, 1, 1);
+        emissionDistributions = new S_EmissionDistribution(new MutableDouble(b), 15,  .1, .2, 1, 1);
 
         machineKeys = new int[words.length];
         emissions = new int[words.length][];
@@ -231,7 +231,7 @@ public class BNOL {
      */
     public Pair<int[][], int[]> generateFromScratch(int length, int alphabetSize, int H,  double b, double pForMachineStates, double pForMachineTransitions){
         TIntObjectHashMap<Machine> machines = new TIntObjectHashMap();
-        S_EmissionDistribution emissionDistributions = new S_EmissionDistribution(new MutableDouble(b), .3, .7, 10, .5);
+        S_EmissionDistribution emissionDistributions = new S_EmissionDistribution(new MutableDouble(b), 15, .3, .7, 10, .5);
 
         int[] machineKeys = new int[length];
         int[][] emissions = new int[length][];
