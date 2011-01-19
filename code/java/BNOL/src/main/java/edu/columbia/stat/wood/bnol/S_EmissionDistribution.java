@@ -10,6 +10,7 @@ import edu.columbia.stat.wood.bnol.util.GammaDistribution;
 import edu.columbia.stat.wood.bnol.util.IntTreeDiscreteDistribution;
 import edu.columbia.stat.wood.bnol.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.bnol.util.MutableDouble;
+import edu.columbia.stat.wood.bnol.util.MutableInt;
 import edu.columbia.stat.wood.bnol.util.Pair;
 import gnu.trove.list.array.TIntArrayList;
 
@@ -100,6 +101,7 @@ public class S_EmissionDistribution {
         int emission;
         double cuSum, cuSumLast;
         double randomNumber = rng.nextDouble() * (high - low) + low;
+        double startRandomNumber = randomNumber;
         while(true){
             emission = -2;
             cuSum = 0.0;
@@ -128,13 +130,13 @@ public class S_EmissionDistribution {
 
                 assert high <= 1.0;
                 assert low >= 0.0;
-                assert randomNumber >= low && randomNumber <= high;
+                assert randomNumber >= low && randomNumber <= high : randomNumber + ", " + low + ", " + high;
             }
         }
 
         assert emission == -1;
         
-        return new Pair(out.toArray(), randomNumber);
+        return new Pair(out.toArray(), startRandomNumber);
     }
 
     /**
@@ -195,8 +197,8 @@ public class S_EmissionDistribution {
             sampleHyperParameters(temp);
         }
         sampleSeatingArrangements(baseNode);
-        System.out.print(discounts[0].value() + ", " + discounts[1].value() +
-                ", " + concentrations[0].value() + ", " + concentrations[1].value() + ", ");
+        //System.out.print(discounts[0].value() + ", " + discounts[1].value() +
+          //      ", " + concentrations[0].value() + ", " + concentrations[1].value() + ", ");
         return sampleHyperParameters(temp);
     }
 
@@ -207,8 +209,43 @@ public class S_EmissionDistribution {
     public void removeEmptyNodes(){
         removeEmptyNodes(baseNode);
     }
-    
+
+    /**
+     * Indicator that there are no counts in the distribution tree
+     * @return true if the distribution tree is empty, else false
+     */
+    public boolean isEmpty(){
+        return baseNode.isEmpty();
+    }
+
+    /**
+     * Gets the number of nodes in the tree.
+     * @return node count
+     */
+    public int nodeCount(){
+        MutableInt nodeCount = new MutableInt(0);
+        nodeCount(baseNode, nodeCount);
+        return nodeCount.value();
+    }
+
     /***********************private methods************************************/
+
+    /**
+     * Recursive function to count the number of nodes in this tree.
+     * @param currentNode current node of recursion
+     * @param count running count of nodes
+     */
+    private void nodeCount(Node currentNode, MutableInt count){
+        if(currentNode.left != null){
+            nodeCount(currentNode.left, count);
+        }
+
+        if(currentNode.right != null){
+            nodeCount(currentNode.right, count);
+        }
+
+        count.increment();
+    }
 
     /**
      * Recursive function to remove empty nodes.

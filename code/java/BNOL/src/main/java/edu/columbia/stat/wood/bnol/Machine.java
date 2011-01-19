@@ -110,7 +110,7 @@ public class Machine {
                 values[j].set(proposal);
                 
                 double proposedLogEvidence = logEvidence(emissions, emissionDistributions, indices);
-
+                
                 double r = Math.exp(proposedLogEvidence - logEvidence);
                 r = Math.pow(r < 1.0 ? r : 1.0, 1.0 / temp);
                 
@@ -118,20 +118,27 @@ public class Machine {
                     prior.unseat(context, proposal);
                     prior.seat(context, currentValue);
                     values[j].set(currentValue);
-                    int[] oldMachineKeys = getAllMachineState(emissions, indices);
+                    //System.out.println("1");
+                    int[] oldMachineKeys = getAllMachineStates(emissions, indices);
 
                     prior.unseat(context, currentValue);
                     prior.seat(context, proposal);
                     values[j].set(proposal);
-                    int[] newMachineKeys = getAllMachineState(emissions, indices);
+                    //System.out.println("2");
+                    int[] newMachineKeys = getAllMachineStates(emissions, indices);
 
+                    //System.out.println("3");
                     adjustEmissionsDistributions(oldMachineKeys, newMachineKeys, emissionDistributions, emissions, indices);
-
+                    //System.out.println("4");
                     logEvidence = proposedLogEvidence;
                 } else {
+                    //System.out.println("5");
                     prior.unseat(context, proposal);
+                    //System.out.println("6");
                     prior.seat(context, currentValue);
+                    //System.out.println("7");
                     values[j].set(currentValue);
+                    //System.out.println("8");
                 }
             }
 
@@ -201,10 +208,10 @@ public class Machine {
 
     /***********************private methods************************************/
 
-    private int[] getAllMachineState(int[][] emissions, int[] indices){
+    private int[] getAllMachineStates(int[][] emissions, int[] indices){
         int[] machineStates = new int[indices.length];
 
-        for(int i = 0; i++ < indices.length;){
+        for(int i = 0; i < indices.length; i++){
             machineStates[i] = get(emissions, indices[i]);
         }
 
@@ -213,7 +220,7 @@ public class Machine {
 
     private void adjustEmissionsDistributions(int[] oldMachineStates, int[] newMachineStates, S_EmissionDistribution emissionDistributions, int[][] emissions, int[] indices){
         assert oldMachineStates.length == newMachineStates.length;
-        for(int i = 0; i++ < oldMachineStates.length;){
+        for(int i = 0; i < oldMachineStates.length; i++){
             if(oldMachineStates[i] != newMachineStates[i]){
                 emissionDistributions.unseat(oldMachineStates[i], emissions[indices[i]]);
                 emissionDistributions.seat(newMachineStates[i], emissions[indices[i]]);

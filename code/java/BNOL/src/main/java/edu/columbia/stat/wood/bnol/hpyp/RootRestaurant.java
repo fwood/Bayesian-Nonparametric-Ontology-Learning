@@ -11,7 +11,9 @@ import edu.columbia.stat.wood.bnol.util.MutableInt;
 import edu.columbia.stat.wood.bnol.util.Pair;
 import gnu.trove.iterator.TIntObjectIterator;
 import gnu.trove.map.hash.TIntObjectHashMap;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map.Entry;
 
 /**
  * An override of the Restaurant class to put at the very base of the tree to
@@ -22,14 +24,14 @@ import java.util.Iterator;
 public class RootRestaurant extends Restaurant {
 
     private IntDiscreteDistribution baseDistribution;
-    private TIntObjectHashMap<MutableInt> customerCount;
+    private HashMap<Integer, MutableInt> customerCount;
 
     /***********************constructor methods********************************/
 
     public RootRestaurant(IntDiscreteDistribution baseDistribution){
         super(null, null, null);
         this.baseDistribution = baseDistribution;
-        customerCount = new TIntObjectHashMap<MutableInt>();
+        customerCount = new HashMap();
     }
 
     /***********************public methods*************************************/
@@ -40,11 +42,10 @@ public class RootRestaurant extends Restaurant {
     @Override
     public boolean isEmptyRestaurant(){
         int customers = 0;
-        TIntObjectIterator<MutableInt> iterator = customerCount.iterator();
-        while(iterator.hasNext()){
-            iterator.advance();
-            customers += iterator.value().value();
+        for(MutableInt value : customerCount.values()){
+            customers += value.value();
         }
+
         return customers == 0;
     }
 
@@ -79,6 +80,7 @@ public class RootRestaurant extends Restaurant {
         count.decrement();
 
         assert count.value() >= 0;
+        
         if(count.value() == 0){
             customerCount.remove(type);
         }
@@ -160,10 +162,8 @@ public class RootRestaurant extends Restaurant {
     @Override
     public double score(){
         double score = 0.0;
-        TIntObjectIterator<MutableInt> iterator = customerCount.iterator();
-        while(iterator.hasNext()){
-            iterator.advance();
-            score += (double) iterator.value().value() * Math.log(baseDistribution.probability(iterator.key()));
+        for(Entry<Integer, MutableInt> entry : customerCount.entrySet()){
+            score += (double) entry.getValue().value() * Math.log(baseDistribution.probability(entry.getKey().intValue()));
         }
         return score;
     }
@@ -190,10 +190,8 @@ public class RootRestaurant extends Restaurant {
     @Override
     public String toString() {
         String toStr = "Root Restaurant : \n";
-        TIntObjectIterator<MutableInt> iterator = customerCount.iterator();
-        while(iterator.hasNext()){
-            iterator.advance();
-            toStr = toStr + iterator.key() + "->" + iterator.value().value() + "\n";
+        for(Entry<Integer, MutableInt> entry : customerCount.entrySet()){
+            toStr = toStr + entry.getKey().intValue() + "->" + entry.getValue().value() + "\n";
         }
         
         return toStr;
