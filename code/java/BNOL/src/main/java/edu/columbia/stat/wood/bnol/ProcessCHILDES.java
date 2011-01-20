@@ -65,6 +65,7 @@ public class ProcessCHILDES {
                 String[] words = line.split(" ");
                 for(String word : words){
                     size++;
+                    word = word.toLowerCase();
                     if(encoder.get(word) == null){
                         dictionary.put(encoder.size(), word);
                         encoder.put(word, encoder.size());
@@ -94,7 +95,7 @@ public class ProcessCHILDES {
         }
 
         public int next() throws IOException{
-            int next = enc.get(words[index++]);
+            int next = enc.get(words[index++].toLowerCase());
 
             while(index == words.length){
                 String line = br.readLine();
@@ -124,5 +125,4 @@ public class ProcessCHILDES {
             System.out.println(pc.dictionary().get(word));
         }
     }
-
 }
