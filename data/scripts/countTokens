@@ -1,0 +1,4 @@
+#!/bin/bash
+perl -nle '$w{$_}++ for grep /\w/, map { s/[\. ,]*$//g; lc($_) } split; sub END { printf("%7d\t%s\n", $c, $w) while (($w,$c) = each(%w)) }' ../_CHILDES.parsed.txt > ../token_counts_unsorted.txt
+sort -r ../token_counts_unsorted.txt > ../token_counts.txt
+rm ../token_counts_unsorted.txt
