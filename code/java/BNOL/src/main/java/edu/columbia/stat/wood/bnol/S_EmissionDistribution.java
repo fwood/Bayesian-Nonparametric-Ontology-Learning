@@ -19,7 +19,7 @@ import gnu.trove.list.array.TIntArrayList;
  * @author nicholasbartlett
  */
 
-public class S_EmissionDistribution_archive {
+public class S_EmissionDistribution {
 
     private Node baseNode;
     private IntTreeDiscreteDistribution baseDist;
@@ -34,7 +34,7 @@ public class S_EmissionDistribution_archive {
      * be changed if these are not working well.
      * @param b initial b used as the base distribution on the emissions at each node
      */
-    public S_EmissionDistribution_archive(MutableDouble b){
+    public S_EmissionDistribution(MutableDouble b){
         if(b.value() > 1.0 || b.value() < 0.0){
             throw new IllegalArgumentException("b must be in 0 - 1");
         }
@@ -47,7 +47,7 @@ public class S_EmissionDistribution_archive {
         baseNode = new Node();
     }
 
-    public S_EmissionDistribution_archive(MutableDouble b, double d0, double d1, double c0, double c1){
+    public S_EmissionDistribution(MutableDouble b, double d0, double d1, double c0, double c1){
         if(b.value() > 1.0 || b.value() < 0.0){
             throw new IllegalArgumentException("b must be in 0 - 1");
         }
