@@ -1,4 +1,4 @@
 #!/bin/bash
 cd ..
-cat _CHILDES.raw.txt | /usr/bin/perl -e 'while(<STDIN>) {$_ =~ s/[()]//g; $_ =~ s/<.*>\s+\[.*\]//g; $_ =~ s/.+\s+\[\/+\]//g; $_ =~ s/\[[><!?]\]//g; $_ =~ s/\[[x=].*\]//g; $_ =~ s/^\&//g; $_ =~ s/.+\s+\[:\s+(\w+)\]/$1/g;$_ =~ s/\://g; $_ =~ s/[[:cntrl:]][\d]*_[\d]*.*[[:cntrl:]]//g; if($_ =~ /0\s+\./){next;} print $_ }' > _CHILDES.parsed.txt
+cat _CHILDES.raw.txt | /usr/bin/perl -e 'while(<STDIN>) {$_ =~ s/[()]//g; $_ =~ s/<.*>\s+\[.*\]//g; $_ =~ s/.+\s+\[\/+\]//g; $_ =~ s/\[[><!?]\]//g; $_ =~ s/\[[x=].*\]//g; $_ =~ s/^\&//g; $_ =~ s/.+\s+\[:\s+(\w+)\]/$1/g;$_ =~ s/\://g; $_ =~ s/[[:cntrl:]][\d]*_[\d]*.*[[:cntrl:]]//g; $_ =~ s/([\s]+)/ /g; $_ =~ s/([\s]+)$/\n/g; if($_ =~ /0\s+\./){next;} print $_ }' > _CHILDES.parsed.txt
 cd .
