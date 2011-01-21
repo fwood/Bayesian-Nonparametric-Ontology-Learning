@@ -46,6 +46,7 @@ while(<STDIN>) {
 	$_ =~ s/://g; # remove left over ":"'s
 	$_ =~ s/\+[^\s]*//g; # remove "+xxx"'s
 
+	$_ =~ s/\"([^\s]*)\"/$1/g;
 	$_ =~ s/\s+/ /g;
 	$_ =~ s/^(\s+)//g;
 	
