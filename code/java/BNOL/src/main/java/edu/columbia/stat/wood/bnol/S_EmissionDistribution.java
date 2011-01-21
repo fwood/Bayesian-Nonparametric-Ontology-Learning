@@ -13,13 +13,23 @@ import edu.columbia.stat.wood.bnol.util.MutableDouble;
 import edu.columbia.stat.wood.bnol.util.MutableInt;
 import edu.columbia.stat.wood.bnol.util.Pair;
 import gnu.trove.list.array.TIntArrayList;
+import java.io.Externalizable;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
+import java.util.Arrays;
 
 /**
  * Emission distribution for the latent binary state variables used in BNOL.
  * @author nicholasbartlett
  */
 
-public class S_EmissionDistribution {
+public class S_EmissionDistribution implements Externalizable {
 
     private Node baseNode;
     private IntTreeDiscreteDistribution baseDist;
@@ -34,8 +44,8 @@ public class S_EmissionDistribution {
      * be changed if these are not working well.
      * @param b initial b used as the base distribution on the emissions at each node
      */
-    public S_EmissionDistribution(MutableDouble b){
-        if(b.value() > 1.0 || b.value() < 0.0){
+    public S_EmissionDistribution(double b){
+        if(b > 1.0 || b < 0.0){
             throw new IllegalArgumentException("b must be in 0 - 1");
         }
 
@@ -47,8 +57,8 @@ public class S_EmissionDistribution {
         baseNode = new Node();
     }
 
-    public S_EmissionDistribution(MutableDouble b, double d0, double d1, double c0, double c1){
-        if(b.value() > 1.0 || b.value() < 0.0){
+    public S_EmissionDistribution(double b, double d0, double d1, double c0, double c1){
+        if(b > 1.0 || b < 0.0){
             throw new IllegalArgumentException("b must be in 0 - 1");
         }
 
@@ -58,6 +68,8 @@ public class S_EmissionDistribution {
         baseDist = new IntTreeDiscreteDistribution(b);
         baseNode = new Node();
     }
+
+    public S_EmissionDistribution(){}
 
     /***********************public methods*************************************/
 
@@ -223,6 +235,31 @@ public class S_EmissionDistribution {
         MutableInt nodeCount = new MutableInt(0);
         nodeCount(baseNode, nodeCount);
         return nodeCount.value();
+    }
+
+    /*private Node baseNode;
+    private IntTreeDiscreteDistribution baseDist;
+    private MutableDouble[] discounts, concentrations;
+    private GammaDistribution concentrationPrior;
+    private MersenneTwisterFast rng = new MersenneTwisterFast(5);*/
+
+    public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeObject(baseDist);
+        out.writeObject(concentrations);
+        out.writeObject(discounts);
+        out.writeObject(concentrationPrior);
+        out.writeObject(rng);
+        baseNode.serializeOut(out);
+    }
+
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        baseDist = (IntTreeDiscreteDistribution) in.readObject();
+        concentrations = (MutableDouble[]) in.readObject();
+        discounts = (MutableDouble[]) in.readObject();
+        concentrationPrior = (GammaDistribution) in.readObject();
+        rng = (MersenneTwisterFast) in.readObject();
+        baseNode = new Node(0);
+        baseNode.serializeIn(in);
     }
 
     /***********************private methods************************************/
@@ -400,7 +437,7 @@ public class S_EmissionDistribution {
         score[0] += hpypScore[0];
         score[1] += hpypScore[1];
     }
-    
+
     /***********************private classes************************************/
 
     private class Node extends IntHPYP {
@@ -409,7 +446,11 @@ public class S_EmissionDistribution {
 
         /***********************constructor methods****************************/
         public Node(){
-            super(discounts, concentrations, baseDist, concentrationPrior);
+            super(discounts, concentrations, baseDist, null);
+        }
+
+        public Node(int i){
+            super(discounts, concentrations, null);
         }
 
         /***********************public methods*********************************/
@@ -436,28 +477,94 @@ public class S_EmissionDistribution {
                 throw new IllegalArgumentException("key must be 0 or 1, not " + key);
             }
         }
+
+        private int[] keys(){
+            int[] keys;
+            if (left != null && right != null){
+                keys = new int[]{0,1};
+            } else if (left != null){
+                keys = new int[]{0};
+            } else if (right != null){
+                keys = new int[]{1};
+            } else {
+                keys = new int[0];
+            }
+
+            return keys;
+        }
+
+        private Node getSerialize(int key){
+            if(key == 0){
+                if(left == null){
+                    left = new Node(0);
+                }
+                return left;
+            } else if (key == 1){
+                if(right == null){
+                    right = new Node(0);
+                }
+                return right;
+            } else {
+                throw new IllegalArgumentException("key must be 0 or 1, not " + key);
+            }
+        }
+
+        public void serializeOut(ObjectOutput out) throws IOException{
+            writeExternalNoHyperParams(out);
+            int[] keys = keys();
+            out.writeInt(keys.length);
+            for(int key : keys){
+                out.writeInt(key);
+                get(key).serializeOut(out);
+            }
+        }
+
+        public void serializeIn(ObjectInput in) throws ClassNotFoundException, IOException{
+            readExternalNoHyperParams(in, concentrations, discounts, null);
+            
+            int size = in.readInt();
+            for(int i = 0; i < size; i++){
+                int key = in.readInt();
+                getSerialize(key).serializeIn(in);
+            }
+        }
     }
 
-
     /*
-    public static void main(String[] args) {
-        S_EmissionDistribution ed = new S_EmissionDistribution(new MutableDouble(0.1));
+    public static void main(String[] args) throws IOException, ClassNotFoundException {
+        S_EmissionDistribution ed = new S_EmissionDistribution(0.1);
 
-        double low = 0.7, high = 0.8;
+        double low = 0.2, high = 0.8;
         Pair<int[], Double> emission = ed.generate(0, low, high);
-        System.out.println(Arrays.toString(emission.first()));
+        ed.seat(0, emission.first());
 
         emission = ed.generate(0, low, high);
-        System.out.println(Arrays.toString(emission.first()));
+        ed.seat(0, emission.first());
 
         emission = ed.generate(0, low, high);
-        System.out.println(Arrays.toString(emission.first()));
+        ed.seat(1, emission.first());
 
         emission = ed.generate(0, low, high);
-        System.out.println(Arrays.toString(emission.first()));
+        ed.seat(1, emission.first());
 
         emission = ed.generate(0, low, high);
-        System.out.println(Arrays.toString(emission.first()));
-    }    */
+        ed.seat(2, emission.first());
+
+        ed.sample(1, 1.0);
+
+        System.out.println(ed.score());
+        ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(new File("/Users/nicholasbartlett/Desktop/hpyp.out")));
+        oos.writeObject(ed);
+        oos.close();
+        
+        ObjectInputStream ois = new ObjectInputStream(new FileInputStream(new File("/Users/nicholasbartlett/Desktop/hpyp.out")));
+        S_EmissionDistribution e = (S_EmissionDistribution) ois.readObject();
+        System.out.println(e.score());
+
+        for(int i = 0; i < 10; i++){
+            System.out.println(ed.sample(1,1.0));
+            System.out.println(e.sample(1,1.0));
+        }        
+    }*/
 }
 
