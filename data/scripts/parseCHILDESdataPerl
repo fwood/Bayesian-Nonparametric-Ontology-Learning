@@ -1,0 +1,58 @@
+#!/usr/bin/perl
+while(<STDIN>) {
+	chomp;
+	$_ = lc($_);
+	$_ =~ s/[()]//g; 
+	$_ =~ s/\[[\?|\!|"|<|>]\]//g; # remove the "[?]"'s and "[!]"'s
+	$_ =~ s/\[[=|-](.*?)\]//g; # remove the "[= ]" stuff
+	$_ =~ s/([it|there|what|who|where|this])'s/$1 is/g; # exands "it's" to "it is" for all "'s"
+	$_ =~ s/([where|what|why|you|i])'d/$1 did/g; # exands "it's" to "it is" for all "'s"
+	$_ =~ s/o'clock/oclock/g;
+	$_ =~ s/([doll|paul|this|mommy|daddy|everybody|jeep|chicken|doggie])'s/$1 is/g; # this introduces some errors in this corpus, but fewer than it corrects
+	$_ =~ s/([she|mam|he|it|they|you])'ll/$1 will/g; # exands "she'll" to "she will" for many "'ll"'s
+	$_ =~ s/([you|we|what|where])'re/$1 are/g; # "you're" -> "you are"
+	$_ =~ s/([you|we|what|where|i])'ve/$1 have/g; # "you're" -> "you are"
+	$_ =~ s/([i])'m/$1 am/g; # "i'm" -> "i am"
+	$_ =~ s/([do|does|was])n't/$1 not/g; # exands "don't" to "do not"
+	$_ =~ s/<.*?>\s+\[\/+?\]//g; # remove "<xxx xxx> [/]" type stuff
+	$_ =~ s/[<|>]//g; # remove remaining ">"'s and "<"'s
+	$_ =~ s/\w*\s*\[:(.*?)\]/$1/g; # replace "xxx [: yyy]" with "yyy"
+	$_ =~ s/[^\s]*\s*\[\/\]//g; # remove the "xxx [/]" stuff
+	$_ =~ s/[^\s]*\s*\[\/\/\]//g; # remove the "xxx [//]" stuff
+	$_ =~ s/\[[\^|\%|\*|+|\/](.*?)\]//g; # remove the "[+ xxx]" and "[* xxx]" and "[^ xxx]" and "[% xxx]"  stuff
+	$_ =~ s/\[=!(.*?)\]//g; # remove the "[=! ]" stuff
+	$_ =~ s/\[!!\]//g; # remove the "[!!]" stuff
+	$_ =~ s/&[^\s]+//g; # remove all "&xxxx" stuff
+	if ($_ =~ /^([^\s]*)\s*\[x\s*(\d*)\s*?\](.*)/) 
+	{	
+		$_ = "";
+		for($count = 0;$count < $2;$count++) {
+			$_ = $_.$1." ";
+		}
+		$_ = $_.$3;
+	}
+	while ($_ =~ /(.*?)\s*([^\s]*)\s+\[x\s*(\d*)\s*?\](.*)/) 
+	{	
+		#print "\n-".$1."-".$2."-".$3."-".$4."\n";
+		$_ = $1." ";
+		for($count = 0;$count < $3;$count++) {
+			$_ = $_.$2." ";
+		}
+		$_ = $_.$4;
+	}
+	$_ =~ s/[[:cntrl:]]\d*_^[[:cntrl:]]*?[[:cntrl:]]//g; 
+	$_ =~ s/[[:cntrl:]]\d*_\d*[[:cntrl:]]$//g; 
+	$_ =~ s/\[\]//g; # remove remaining empty "[]"'s
+	$_ =~ s/://g; # remove left over ":"'s
+	$_ =~ s/\+[^\s]*//g; # remove "+xxx"'s
+
+	$_ =~ s/\s+/ /g;
+	$_ =~ s/^(\s+)//g;
+	
+	#if ($_ =~ /\$=/){next;} 
+	#if ($_ =~ /^xxx/){next;} 
+	if ($_ =~ /^\d*\s*[^\s]+$/){next;} 
+	if ($_ =~ /^\w+\s[^\s]$/){next;} 
+	#if($_ =~ /0\s+\./){next;} 
+	print $_."\n"; 
+}

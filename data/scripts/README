@@ -1,0 +1,5 @@
+To generate the data run these three scripts in this order
+
+getCHILDESdata
+parseCHILDESdata
+countTokens
