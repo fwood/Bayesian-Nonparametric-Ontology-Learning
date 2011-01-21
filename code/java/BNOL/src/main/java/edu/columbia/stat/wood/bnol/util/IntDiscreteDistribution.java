@@ -5,27 +5,30 @@
 
 package edu.columbia.stat.wood.bnol.util;
 
+import java.io.Serializable;
 import java.util.Iterator;
 
 /**
  * Int discrete distribution interface.
  * @author nicholasbartlett
  */
-public interface IntDiscreteDistribution {
+public abstract class IntDiscreteDistribution implements Serializable {
+
+    private static final long serialVersionUID = 1;
 
     /**
      * Gets the probability of certain type.
      * @param type int type
      * @return probability of this type, this should be in [0, 1.0]
      */
-    public double probability(int type);
+    abstract public double probability(int type);
 
     /**
      * Generates a random sample from the discrete distribution.
      * @param rng random number generator
      * @return generated int sample
      */
-    public int generate(MersenneTwisterFast rng);
+    abstract public int generate(MersenneTwisterFast rng);
 
     /**
      * Gets an iterator over Integer Double pairs such that the Double value is the
@@ -35,6 +38,6 @@ public interface IntDiscreteDistribution {
      * in the iterator the result should be 1.0.
      * @return iterator
      */
-    public Iterator<Pair<Integer, Double>> iterator();
+    abstract public Iterator<Pair<Integer, Double>> iterator();
 
 }

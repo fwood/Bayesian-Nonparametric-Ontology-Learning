@@ -12,10 +12,12 @@ import edu.columbia.stat.wood.bnol.util.IntGeometricDistribution;
 import edu.columbia.stat.wood.bnol.util.IntUniformDiscreteDistribution;
 import edu.columbia.stat.wood.bnol.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.bnol.util.MutableDouble;
+import edu.columbia.stat.wood.bnol.util.MutableInt;
 import edu.columbia.stat.wood.bnol.util.Pair;
 import gnu.trove.iterator.TIntObjectIterator;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 /**
@@ -26,11 +28,27 @@ public class BNOL {
     
     public static void main(String[] args){
         //int[] words, int alphabetSize, int H, double b, double pForMachineStates, double pForMachineTransitions){
-        BNOL bnol = new BNOL(new int[10], 1000, 10, 0.2, 0.05, 0.05);
-        Pair<int[][], int[]> pair = bnol.generateFromScratch(10000, 1000, 10, 0.2, 0.5, 0.5);
+        BNOL bb = new BNOL(new int[0], 5000, 10, 1d / 7d, 0.2, 0.2);
+        bb.generateFromScratch(10000);
 
+        System.out.print(bb.score() + ", ");
+        System.out.println(bb.meanAndVarEmissionLength()[0] + ", " + bb.meanAndVarEmissionLength()[1]);
+        System.out.println();
 
-        BNOL b = new BNOL(pair.second(), 1000, 10, 0.5, 0.05, 0.05);
+        BNOL b = new BNOL(bb.words, 5000, 10, 1d / 7d, 0.2, 0.2);
+        b.initialize();
+
+        System.out.print(b.score() + ", ");
+        System.out.println(b.meanAndVarEmissionLength()[0] + ", " + b.meanAndVarEmissionLength()[1]);
+        
+        for(int i = 0; i < 1000; i++){
+            System.out.print(b.sample(1d) + ", ");
+            System.out.println(b.meanAndVarEmissionLength()[0] + ", " + b.meanAndVarEmissionLength()[1]);
+        }
+
+        b.printEmissions(System.out);
+        
+        /*
         for(int i = 0; i < 100; i++){
             System.out.println(b.sample(1000) + ", " + b.meanAndVarEmissionLength()[0] + ", " + b.meanAndVarEmissionLength()[1]);
         }
@@ -45,18 +63,17 @@ public class BNOL {
 
         for(int i = 0; i < 1000; i++){
             System.out.println(b.sample(1) + ", " + b.meanAndVarEmissionLength()[0] + ", " + b.meanAndVarEmissionLength()[1]);
-        }
+        }*/
         
-        b.printEmissions(System.out);
+        //b.printEmissions(System.out);
     }
-
 
     private TIntObjectHashMap<Machine> machines;
     private S_EmissionDistribution emissionDistributions;
 
     private int[] machineKeys;
     private int[][] emissions;
-    private int[] words;
+    public int[] words;
 
     private HPYP machineTransitions;
     private HPYP wordDistribution;
@@ -84,7 +101,7 @@ public class BNOL {
      */
     public BNOL(int[] words, int alphabetSize, int H, double b, double pForMachineStates, double pForMachineTransitions){
         machines = new TIntObjectHashMap();
-        emissionDistributions = new S_EmissionDistribution(new MutableDouble(b), 15,  .1, .2, 1, 1);
+        emissionDistributions = new S_EmissionDistribution(new MutableDouble(b), .1, .2, 1, 1);
 
         machineKeys = new int[words.length];
         emissions = new int[words.length][];
@@ -96,8 +113,8 @@ public class BNOL {
         conc[0] = new MutableDouble(20);
         conc[1] = new MutableDouble(5);
 
-        disc[0] = new MutableDouble(0.90);
-        disc[1] = new MutableDouble(0.95);
+        disc[0] = new MutableDouble(0.8);
+        disc[1] = new MutableDouble(0.9);
 
         machineTransitions = new IntHPYP(disc, conc, new IntGeometricDistribution(pForMachineTransitions, 0), new GammaDistribution(1d,100d));
         
@@ -117,15 +134,15 @@ public class BNOL {
         conc[10] = new MutableDouble(1);
 
         disc[0] = new MutableDouble(.1);
-        disc[1] = new MutableDouble(.2);
-        disc[2] = new MutableDouble(.3);
-        disc[3] = new MutableDouble(.4);
-        disc[4] = new MutableDouble(.5);
-        disc[5] = new MutableDouble(.6);
-        disc[6] = new MutableDouble(.7);
-        disc[7] = new MutableDouble(.8);
-        disc[8] = new MutableDouble(.9);
-        disc[9] = new MutableDouble(.95);
+        disc[1] = new MutableDouble(.1);
+        disc[2] = new MutableDouble(.2);
+        disc[3] = new MutableDouble(.3);
+        disc[4] = new MutableDouble(.4);
+        disc[5] = new MutableDouble(.5);
+        disc[6] = new MutableDouble(.6);
+        disc[7] = new MutableDouble(.7);
+        disc[8] = new MutableDouble(.8);
+        disc[9] = new MutableDouble(.9);
         disc[10] = new MutableDouble(.95);
 
         wordDistribution = new IntHPYP(disc, conc, new IntUniformDiscreteDistribution(alphabetSize), new GammaDistribution(1d,100d));
@@ -133,12 +150,9 @@ public class BNOL {
         this.H = H;
         this.b = b;
         this.pForMachineStates = pForMachineStates;
-
-        initialize();
     }
 
     /***********************public methods*************************************/
-
 
     public double[] meanAndVarEmissionLength(){
         double m = 0.0, var = 0.0;
@@ -153,6 +167,21 @@ public class BNOL {
         return new double[]{m,var};
     }
 
+    public double score(){
+        ll_machine_transitions = machineTransitions.score(true);
+
+        ll_machines = 0;
+        for(Machine m : machines.valueCollection()){
+            ll_machines += m.score(emissions, emissionDistributions, machineKeys);
+        }
+
+        ll_emissions = emissionDistributions.score();
+
+        ll_words = wordDistribution.score(true);
+
+        return ll_emissions + ll_words + ll_machines + ll_machine_transitions;
+    }
+
     public double sample(double temp){
         sampleMachineKeys(temp);
 
@@ -164,8 +193,7 @@ public class BNOL {
 
         sampleEmissions(temp);
 
-        wordDistribution.sampleSeatingArrangements(10);
-        ll_words = wordDistribution.score(true); //wordDistribution.sample(temp);
+        ll_words = wordDistribution.sample(temp);
         
         return ll_emissions + ll_words + ll_machines + ll_machine_transitions;
     }
@@ -229,54 +257,11 @@ public class BNOL {
      * @param pForMachineTransitions parameter for geometric distribution
      * @return pair, first of which is generated binary emission vectors, second of which is words
      */
-    public Pair<int[][], int[]> generateFromScratch(int length, int alphabetSize, int H,  double b, double pForMachineStates, double pForMachineTransitions){
-        TIntObjectHashMap<Machine> machines = new TIntObjectHashMap();
-        S_EmissionDistribution emissionDistributions = new S_EmissionDistribution(new MutableDouble(b), 15, .3, .7, 10, .5);
+    public void generateFromScratch(int length){
 
-        int[] machineKeys = new int[length];
-        int[][] emissions = new int[length][];
-        int[] words = new int[length];
-        
-
-        MutableDouble[] conc = new MutableDouble[2];
-        MutableDouble[] disc = new MutableDouble[2];
-
-        conc[0] = new MutableDouble(20);
-        conc[1] = new MutableDouble(5);
-
-        disc[0] = new MutableDouble(0.90);
-        disc[1] = new MutableDouble(0.95);
-
-        HPYP machineTransitions = new IntHPYP(disc, conc, new IntGeometricDistribution(pForMachineTransitions, 0), new GammaDistribution(1d,100d));
-
-        conc = new MutableDouble[11];
-        disc = new MutableDouble[11];
-
-        conc[0] = new MutableDouble(20);
-        conc[1] = new MutableDouble(2);
-        conc[2] = new MutableDouble(1);
-        conc[3] = new MutableDouble(1);
-        conc[4] = new MutableDouble(1);
-        conc[5] = new MutableDouble(1);
-        conc[6] = new MutableDouble(1);
-        conc[7] = new MutableDouble(1);
-        conc[8] = new MutableDouble(1);
-        conc[9] = new MutableDouble(1);
-        conc[10] = new MutableDouble(1);
-
-        disc[0] = new MutableDouble(.2);
-        disc[1] = new MutableDouble(.3);
-        disc[2] = new MutableDouble(.4);
-        disc[3] = new MutableDouble(.5);
-        disc[4] = new MutableDouble(.6);
-        disc[5] = new MutableDouble(.7);
-        disc[6] = new MutableDouble(.8);
-        disc[7] = new MutableDouble(.9);
-        disc[8] = new MutableDouble(.95);
-        disc[9] = new MutableDouble(.95);
-        disc[10] = new MutableDouble(.95);
-
-        HPYP wordDistribution = new IntHPYP(disc, conc, new IntUniformDiscreteDistribution(alphabetSize), new GammaDistribution(1d,100d));
+        machineKeys = new int[length];
+        emissions = new int[length][];
+        words = new int[length];
 
         machineKeys[0] = machineTransitions.draw(null);
         Machine m = new Machine(machineKeys[0], H, pForMachineStates);
@@ -284,6 +269,7 @@ public class BNOL {
         int machineState = m.get(emissions, 0);
         emissions[0] = emissionDistributions.generate(machineState, 0.0, 1.0).first();
         emissionDistributions.seat(machineState, emissions[0]);
+        words[0] = wordDistribution.draw(emissions[0]);
 
         for(int i = 1; i < length; i++){
             machineKeys[i] = machineTransitions.draw(machineKeys[i-1]);
@@ -297,18 +283,13 @@ public class BNOL {
             emissionDistributions.seat(machineState, emissions[i]);
 
             words[i] = wordDistribution.draw(emissions[i]);
-            //System.out.println(machineState);
         }
-
-        return new Pair(emissions, words);
     }
-
-    /***********************private methods************************************/
 
     /**
      * Initializes the arrays, assuming the words are set.
      */
-    private void initialize(){
+    public void initialize(){
         // draw first machine key, create that machine, and get the machine state
         machineKeys[0] = machineTransitions.draw(null);
         int machineState = machineGet(machineKeys[0]).get(emissions, 0);
@@ -316,6 +297,8 @@ public class BNOL {
         // generate first emission and seat it in the emission distribution
         emissions[0] = emissionDistributions.generate(machineState, 0.0, 1.0).first();
         emissionDistributions.seat(machineState, emissions[0]);
+
+        wordDistribution.seat(emissions[0], words[0]);
 
         // repeat the generative process forwards until the end
         for(int i = 1; i < words.length; i++){
@@ -326,8 +309,66 @@ public class BNOL {
             // draw the next emission
             emissions[i] = emissionDistributions.generate(machineState, 0.0, 1.0).first();
             emissionDistributions.seat(machineState, emissions[i]);
+
+            //seat word
+            wordDistribution.seat(emissions[i], words[i]);
         }
     }
+
+    public void accuracyCompleteness(int[][] trueEmissions){
+        assert trueEmissions.length == emissions.length;
+
+        Pair<MutableInt, MutableInt> aParentChild = new Pair(new MutableInt(0), new MutableInt(0));
+        Pair<MutableInt, MutableInt> cParentChild = new Pair(new MutableInt(0), new MutableInt(0));
+
+        Pair<ArrayList<MutableInt>, ArrayList<MutableInt>> aGrouping = new Pair(new ArrayList(), new ArrayList());
+        Pair<ArrayList<MutableInt>, ArrayList<MutableInt>> cGrouping = new Pair(new ArrayList(), new ArrayList());
+
+        
+
+
+        for(int i = 0; i < emissions.length; i++){
+            for(int j = (i + 1); j < emissions.length; j++){
+
+                if (emissions[i].length < emissions[j].length){
+                    for(int k = 0; k < emissions[i].length; k++){
+                        if(emissions[i][k] == emissions[j][k]){
+                            aGrouping.first().get(k).increment();
+                            
+                        }
+                    }
+                }
+
+                
+
+
+
+
+            }
+        }
+    }
+
+    private int isParent(int[] a, int[] b){
+        if(a.length == b.length){
+            return -1;
+        } else {
+            int minLength = Math.min(a.length, b.length);
+            for(int i = 0; i < minLength; i++){
+                if(a[i] != b[i]){
+                    return -1;
+                }
+            }
+            
+            if(a.length > b.length){
+                return 0;
+            } else {
+                return 1;
+            }
+        }
+    }
+
+
+    /***********************private methods************************************/
 
     /**
      * Sample the emission indexed by the given index using a slice sampler.
@@ -375,6 +416,9 @@ public class BNOL {
 
         emissionDistributions.unseat(thisMachineState, currentEmission);
         emissionDistributions.seat(thisMachineState, emissions[index]);
+
+        wordDistribution.unseat(currentEmission, words[index]);
+        wordDistribution.seat(emissions[index], words[index]);
 
         for(int i = 0; i < newMachineStates.length; i++){
             if(newMachineStates[i] != currentMachineStates[i]){
@@ -562,7 +606,7 @@ public class BNOL {
         }
     }
 
-    private boolean checkEmissionDistributions(){
+    /*private boolean checkEmissionDistributions(){
         int machineState;
         for(int i = 0; i < words.length; i++){
             machineState = machineGet(machineKeys[i]).get(emissions, i);
@@ -575,6 +619,21 @@ public class BNOL {
                 emissionDistributions.seat(machineState, emissions[i]);
             }
 
+            return true;
+        } else {
+            return false;
+        }
+    }*/
+
+    private boolean checkWordDistribution(){
+        for(int i = 0; i < words.length; i++){
+            wordDistribution.unseat(emissions[i], words[i]);
+        }
+
+        if (wordDistribution.isEmpty()){
+            for(int i = 0; i < words.length; i++){
+                wordDistribution.seat(emissions[i], words[i]);
+            }
             return true;
         } else {
             return false;

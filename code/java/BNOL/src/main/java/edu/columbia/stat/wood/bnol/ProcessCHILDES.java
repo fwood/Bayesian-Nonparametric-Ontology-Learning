@@ -5,6 +5,7 @@
 
 package edu.columbia.stat.wood.bnol;
 
+import edu.columbia.stat.wood.bnol.util.MutableInt;
 import edu.columbia.stat.wood.bnol.util.Pair;
 import java.io.BufferedReader;
 import java.io.File;
@@ -50,6 +51,8 @@ public class ProcessCHILDES {
             d[i] = iter.next();
         }
 
+        iter.close();
+        
         return d;
     }
 
@@ -62,7 +65,7 @@ public class ProcessCHILDES {
 
             String line;
             while ((line = br.readLine()) != null){
-                String[] words = line.split(" ");
+                String[] words = line.trim().split("[\\s]+");
                 for(String word : words){
                     size++;
                     word = word.toLowerCase();
@@ -87,7 +90,7 @@ public class ProcessCHILDES {
         
         public CHILDESIterator() throws FileNotFoundException, IOException{
             br = new BufferedReader(new FileReader(data));
-            words = br.readLine().split(" ");
+            words = br.readLine().split("[\\s]+");
         }
 
         public boolean hasNext(){
@@ -102,7 +105,7 @@ public class ProcessCHILDES {
                 if(line == null){
                     return next;
                 } else {
-                    words = line.split(" ");
+                    words = line.trim().split("[\\s]+");
                     index = 0;
                 }
             }
@@ -117,12 +120,53 @@ public class ProcessCHILDES {
     public static void main(String[] args) throws IOException{
         File data = new File("/Users/nicholasbartlett/Documents/np_bayes/Bayesian_Nonparametric_Ontology_Learning/data/_CHILDES.parsed.txt");
         ProcessCHILDES pc = new ProcessCHILDES(data);
-        int[] d = pc.get(10);
-        System.out.println(Arrays.toString(d));
+        //int[] d = pc.get(10);
+        //System.out.println(Arrays.toString(d));
         System.out.println(pc.size());
         System.out.println(pc.dictionary().size());
-        for(int word : d){
+        /*for(int word : d){
             System.out.println(pc.dictionary().get(word));
+        }*/
+
+        File f = new File("/Users/nicholasbartlett/Documents/np_bayes/Bayesian_Nonparametric_Ontology_Learning/data/token_counts.txt");
+
+        BufferedReader br = null;
+        HashMap<String, MutableInt> countMap = new HashMap();
+        try{
+            br = new BufferedReader(new FileReader(f));
+            String line;
+            while((line = br.readLine()) != null){
+                line = line.trim();
+                line = line.toLowerCase();
+                String[] words = line.split("[\\s]+");
+               
+                String key = words[1];
+                int count = Integer.valueOf(words[0]).intValue();
+
+                MutableInt value = countMap.get(key);
+                if(value == null){
+                    countMap.put(key, new MutableInt(count));
+                } else {
+                    value.plusEquals(count);
+                }
+            }
+        } finally {
+            if (br != null) br.close();
         }
+
+        for(String key : countMap.keySet()){
+            Integer remove = pc.encoder.remove(key);
+            if(remove == null){
+                System.out.println(key);
+            }
+        }
+
+        System.out.println("---------------------------------------------------");
+
+        for(String key : pc.encoder.keySet()){
+            System.out.println(key);
+        }
+
+        System.out.println(countMap.size());
     }
 }

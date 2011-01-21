@@ -5,7 +5,6 @@
 
 package edu.columbia.stat.wood.bnol.util;
 
-import java.io.Serializable;
 import java.util.Iterator;
 
 /**
@@ -13,8 +12,9 @@ import java.util.Iterator;
  * @author nicholasbartlett
  */
 
-public class IntUniformDiscreteDistribution implements IntDiscreteDistribution, Serializable {
-    static final long serialVersionUID = 1;
+public class IntUniformDiscreteDistribution extends IntDiscreteDistribution{
+    
+    private static final long serialVersionUID = 1;
 
     private int leftType, rightType;
     private double p;

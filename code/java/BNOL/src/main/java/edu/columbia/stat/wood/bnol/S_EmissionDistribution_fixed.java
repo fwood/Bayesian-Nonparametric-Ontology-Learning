@@ -19,7 +19,7 @@ import java.util.Arrays;
  *
  * @author nicholasbartlett
  */
-public class S_EmissionDistribution {
+public class S_EmissionDistribution_fixed {
 
     /*
     public static void main(String[] args) {
@@ -49,7 +49,7 @@ public class S_EmissionDistribution {
     private MersenneTwisterFast rng = new MersenneTwisterFast(5);
     private int length;
 
-    public S_EmissionDistribution(MutableDouble b, int length){
+    public S_EmissionDistribution_fixed(MutableDouble b, int length){
         if(b.value() > 1.0 || b.value() < 0.0){
             throw new IllegalArgumentException("b must be in 0 - 1");
         }
@@ -63,7 +63,7 @@ public class S_EmissionDistribution {
         this.length = length;
     }
 
-    public S_EmissionDistribution(MutableDouble b, int length, double d0, double d1, double c0, double c1){
+    public S_EmissionDistribution_fixed(MutableDouble b, int length, double d0, double d1, double c0, double c1){
         if(b.value() > 1.0 || b.value() < 0.0){
             throw new IllegalArgumentException("b must be in 0 - 1");
         }

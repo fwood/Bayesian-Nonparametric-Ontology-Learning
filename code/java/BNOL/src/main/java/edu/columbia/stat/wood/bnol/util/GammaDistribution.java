@@ -5,6 +5,7 @@
 
 package edu.columbia.stat.wood.bnol.util;
 
+import java.io.Serializable;
 import org.apache.commons.math.MathException;
 import org.apache.commons.math.distribution.GammaDistributionImpl;
 import org.apache.commons.math.special.Gamma;
@@ -17,7 +18,9 @@ import org.apache.commons.math.special.Gamma;
  * with x^(alpha - 1) (exp(-x/beta)/(G(alpha)beta^alpha)).  The mean is alpha * beta
  * and the variance is alpha * beta^2.
  */
-public class GammaDistribution {
+public class GammaDistribution implements Serializable{
+
+    static final long serialVersionUID = 1 ;
     
     private double alpha, beta, logGammaAlpha;
     private GammaDistributionImpl gammaDist;

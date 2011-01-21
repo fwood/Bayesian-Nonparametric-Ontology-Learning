@@ -13,8 +13,10 @@ import java.util.Iterator;
  * @author nicholasbartlett
  */
 
-public class IntGeometricDistribution implements IntDiscreteDistribution {
+public class IntGeometricDistribution extends IntDiscreteDistribution {
 
+    private static final long serialVersionUID = 1 ;
+    
     private double q;
     private int offset;
 
