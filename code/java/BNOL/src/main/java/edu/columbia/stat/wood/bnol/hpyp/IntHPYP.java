@@ -54,10 +54,6 @@ public class IntHPYP extends HPYP {
             throw new IllegalArgumentException("base distribution must be specified");
         }
 
-        if(concentrationPrior == null){
-            throw new IllegalArgumentException("a prior for the concentration parameters must be specified");
-        }
-
         if(discounts != null && discounts.length != 0){
             this.discounts = discounts;
         } else {
@@ -81,6 +77,12 @@ public class IntHPYP extends HPYP {
     }
 
     public IntHPYP(){};
+
+    public IntHPYP(MutableDouble[] discounts, MutableDouble[] concentrations, GammaDistribution concentrationPrior) {
+        this.discounts = discounts;
+        this.concentrations = concentrations;
+        this.concentrationPrior = concentrationPrior;
+    }
 
     /***********************public methods*************************************/
 
@@ -260,6 +262,22 @@ public class IntHPYP extends HPYP {
         root = (RootRestaurant) in.readObject();
         ecr = new Restaurant(root, concentrations[0], discounts[0]);
         ecr.serializeIn(in, 0, discounts, concentrations);
+    }
+
+    public void writeExternalNoHyperParams(ObjectOutput out) throws IOException{
+        out.writeObject(rng);
+        out.writeObject(root);
+        ecr.serializeOut(out);
+    }
+
+    public void readExternalNoHyperParams(ObjectInput in, MutableDouble[] concentrations, MutableDouble[] discounts, GammaDistribution concentrationPrior) throws ClassNotFoundException, IOException {
+        rng = (MersenneTwisterFast) in.readObject();
+        this.concentrations = concentrations;
+        this.discounts = discounts;
+        this.concentrationPrior = concentrationPrior;
+        root = (RootRestaurant) in.readObject();
+        ecr = new Restaurant(root, concentrations[0], discounts[0]);
+        ecr.serializeIn(in, 0, this.discounts, this.concentrations);
     }
 
     /***********************private methods************************************/

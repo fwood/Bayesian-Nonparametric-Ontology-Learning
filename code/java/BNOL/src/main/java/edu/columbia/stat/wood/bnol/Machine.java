@@ -15,6 +15,7 @@ import edu.columbia.stat.wood.bnol.util.MutableDouble;
 import edu.columbia.stat.wood.bnol.util.MutableInt;
 import edu.columbia.stat.wood.bnol.util.SampleWithoutReplacement;
 import gnu.trove.list.array.TIntArrayList;
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map.Entry;
@@ -25,7 +26,9 @@ import java.util.Map.Entry;
  * integers.
  * @author nicholasbartlett
  */
-public class Machine {
+public class Machine implements Serializable{
+
+    private static final long serialVersionUID = 1 ;
 
     private HashMap<StateEmissionPair, MutableInt> delta = new HashMap();
     private HPYP prior;
@@ -48,6 +51,8 @@ public class Machine {
         }
         prior = new IntHPYP(discounts, concentrations, new IntGeometricDistribution(p,1), new GammaDistribution(1,100));
     }
+
+    public Machine(){};
 
     /***********************public methods*************************************/
 

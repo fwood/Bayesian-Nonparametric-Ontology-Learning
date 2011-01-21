@@ -17,14 +17,16 @@ import edu.columbia.stat.wood.bnol.util.Pair;
 import gnu.trove.iterator.TIntObjectIterator;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import java.io.PrintStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 
 /**
  *
  * @author nicholasbartlett
  */
-public class BNOL {
+public class BNOL implements Serializable{
     
     public static void main(String[] args){
         //int[] words, int alphabetSize, int H, double b, double pForMachineStates, double pForMachineTransitions){
@@ -68,7 +70,7 @@ public class BNOL {
         //b.printEmissions(System.out);
     }
 
-    private TIntObjectHashMap<Machine> machines;
+    private HashMap<Integer, Machine> machines;
     private S_EmissionDistribution emissionDistributions;
 
     private int[] machineKeys;
@@ -100,8 +102,8 @@ public class BNOL {
      * @param pForMachineTransitions probability of success for geometric distribution at base of machine transitions
      */
     public BNOL(int[] words, int alphabetSize, int H, double b, double pForMachineStates, double pForMachineTransitions){
-        machines = new TIntObjectHashMap();
-        emissionDistributions = new S_EmissionDistribution(new MutableDouble(b), .1, .2, 1, 1);
+        machines = new HashMap();
+        emissionDistributions = new S_EmissionDistribution(b, .1, .2, 1, 1);
 
         machineKeys = new int[words.length];
         emissions = new int[words.length][];
@@ -171,7 +173,7 @@ public class BNOL {
         ll_machine_transitions = machineTransitions.score(true);
 
         ll_machines = 0;
-        for(Machine m : machines.valueCollection()){
+        for(Machine m : machines.values()){
             ll_machines += m.score(emissions, emissionDistributions, machineKeys);
         }
 
@@ -225,14 +227,12 @@ public class BNOL {
      */
     public double sampleMachines(double temp){
         double score = 0.0;
-        TIntObjectIterator<Machine> iterator = machines.iterator();
-        while(iterator.hasNext()){
-            iterator.advance();
-            iterator.value().sample(emissions, machineKeys, emissionDistributions, 1, temp);
+        for(Machine machine : machines.values()){
+            machine.sample(emissions, machineKeys, emissionDistributions, 1, temp);
 
-            assert iterator.value().checkCounts();
+            assert machine.checkCounts();
 
-            score += iterator.value().score(emissions, emissionDistributions, machineKeys);
+            score += machine.score(emissions, emissionDistributions, machineKeys);
         }
         return score;
     }

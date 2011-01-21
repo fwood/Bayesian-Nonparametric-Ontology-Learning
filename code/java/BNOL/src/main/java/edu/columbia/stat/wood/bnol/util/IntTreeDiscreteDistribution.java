@@ -16,11 +16,11 @@ public class IntTreeDiscreteDistribution extends IntDiscreteDistribution {
 
     private static final long serialVersionUID = 1 ;
     
-    private MutableDouble b;
+    private double b;
 
     /***********************constructor methods********************************/
 
-    public IntTreeDiscreteDistribution(MutableDouble b){
+    public IntTreeDiscreteDistribution(double b){
         this.b = b;
     }
 
@@ -36,9 +36,9 @@ public class IntTreeDiscreteDistribution extends IntDiscreteDistribution {
      */
     public double probability(int type) {
         if(type == 0 || type == 1){
-            return (1.0 - b.value()) / 2.0;
+            return (1.0 - b) / 2.0;
         } else if (type == -1){
-            return b.value();
+            return b;
         } else {
             throw new IllegalArgumentException("Type must be 0, 1, or -1, not " + type);
         }
@@ -74,7 +74,7 @@ public class IntTreeDiscreteDistribution extends IntDiscreteDistribution {
     
     private class IT implements Iterator<Pair<Integer, Double>> {
         private int calls = -1;
-        private double db = b.value();
+        private double db = b;
     
         /***********************public methods*********************************/
 
