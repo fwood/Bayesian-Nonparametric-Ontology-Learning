@@ -46,7 +46,9 @@ while(<STDIN>) {
 	$_ =~ s/://g; # remove left over ":"'s
 	$_ =~ s/\+[^\s]*//g; # remove "+xxx"'s
 	$_ =~ s/(\w*)[,|;]/$1/g; # remove ","'s
+	$_ =~ s/(\w+)([\.|\!|\?])/$1 $2\./g; # change "foo." to "foo ."
 
+	$_ =~ s/\.\./\./g;
 	$_ =~ s/\"([^\s]*)\"/$1/g;
 	$_ =~ s/\s+/ /g;
 	$_ =~ s/^(\s+)//g;
@@ -55,6 +57,8 @@ while(<STDIN>) {
 	#if ($_ =~ /^xxx/){next;} 
 	if ($_ =~ /^\d*\s*[^\s]+$/){next;} 
 	if ($_ =~ /^\w+\s[^\s]$/){next;} 
+	if ($_ =~ /\.\.txt/){next;} 
+	if ($_ =~ /\.txt/){next;} 
 	#if($_ =~ /0\s+\./){next;} 
 	print $_."\n"; 
 }
