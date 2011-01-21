@@ -45,7 +45,7 @@ while(<STDIN>) {
 	$_ =~ s/\[\]//g; # remove remaining empty "[]"'s
 	$_ =~ s/://g; # remove left over ":"'s
 	$_ =~ s/\+[^\s]*//g; # remove "+xxx"'s
-	$_ =~ s/(\w*),/$1/g; # remove ","'s
+	$_ =~ s/(\w*)[,|;]/$1/g; # remove ","'s
 
 	$_ =~ s/\"([^\s]*)\"/$1/g;
 	$_ =~ s/\s+/ /g;
