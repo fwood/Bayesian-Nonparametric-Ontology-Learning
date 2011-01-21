@@ -7,6 +7,7 @@ package edu.columbia.stat.wood.bnol.hpyp;
 
 import edu.columbia.stat.wood.bnol.util.Context;
 import edu.columbia.stat.wood.bnol.util.MutableInt;
+import java.io.Externalizable;
 import java.util.HashMap;
 
 /**
@@ -14,7 +15,7 @@ import java.util.HashMap;
  * project.
  * @author nicholasbartlett
  */
-public abstract class HPYP {
+public abstract class HPYP implements Externalizable {
 
     /**
      * Indicates if the entire HPYP is empty

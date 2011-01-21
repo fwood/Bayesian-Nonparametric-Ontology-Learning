@@ -15,7 +15,12 @@ import gnu.trove.iterator.TIntObjectIterator;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
 import java.util.HashMap;
 import org.apache.commons.math.MathException;
 
@@ -26,8 +31,11 @@ import org.apache.commons.math.MathException;
  */
 public class IntHPYP extends HPYP {
 
+    static final long serialVersionUID = 1 ;
+
     private MersenneTwisterFast rng;
-    private Restaurant ecr, root;
+    private Restaurant ecr;
+    private RootRestaurant root;
     private MutableDouble[] discounts;
     private MutableDouble[] concentrations;
     private GammaDistribution concentrationPrior;
@@ -71,6 +79,8 @@ public class IntHPYP extends HPYP {
         ecr = new Restaurant(root, this.concentrations[0], this.discounts[0]);
         rng = new MersenneTwisterFast(3);
     }
+
+    public IntHPYP(){};
 
     /***********************public methods*************************************/
 
@@ -225,6 +235,31 @@ public class IntHPYP extends HPYP {
             System.out.format(", %.2f", concentrations[i].value());
         }
         System.out.println("]");
+    }
+
+
+    /*private MersenneTwisterFast rng;
+    private Restaurant ecr, root;
+    private MutableDouble[] discounts;
+    private MutableDouble[] concentrations;
+    private GammaDistribution concentrationPrior;*/
+    public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeObject(rng);
+        out.writeObject(concentrations);
+        out.writeObject(discounts);
+        out.writeObject(concentrationPrior);
+        out.writeObject(root);
+        ecr.serializeOut(out);
+    }
+
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        rng = (MersenneTwisterFast) in.readObject();
+        concentrations = (MutableDouble[]) in.readObject();
+        discounts = (MutableDouble[]) in.readObject();
+        concentrationPrior = (GammaDistribution) in.readObject();
+        root = (RootRestaurant) in.readObject();
+        ecr = new Restaurant(root, concentrations[0], discounts[0]);
+        ecr.serializeIn(in, 0, discounts, concentrations);
     }
 
     /***********************private methods************************************/
@@ -468,10 +503,11 @@ public class IntHPYP extends HPYP {
     }
     
     
-    public static void main(String[] args) throws IOException{
+    public static void main(String[] args) throws IOException, ClassNotFoundException{
         File f = new File("/Users/nicholasbartlett/Documents/np_bayes/data/alice_in_wonderland/alice_in_wonderland.txt");
+        //File f = new File("/home/bartlett/BNOL/alice_in_wonderland.txt");
 
-        int depth = 1;
+        int depth = 10;
         int[] context = new int[depth];
 
         BufferedInputStream bis = null;
@@ -485,6 +521,9 @@ public class IntHPYP extends HPYP {
         }
 
         IntHPYP hpyp = new IntHPYP(disc, conc, new IntUniformDiscreteDistribution(256), new GammaDistribution(1,100));
+
+        ObjectOutputStream oos = null;
+        ObjectInputStream ois = null;
 
         try{
             bis = new BufferedInputStream(new FileInputStream(f));
@@ -502,83 +541,44 @@ public class IntHPYP extends HPYP {
                 }
                 context[0] = next;
             }
-            //System.out.println(hpyp.root);
-            //System.out.println(hpyp.ecr);
-            //System.out.println(hpyp.ecr.size());
 
-            /*System.out.println(hpyp.score(true));
-            for(int i = 0; i < 25; i++){
-                System.out.println(hpyp.sample(1000));
-            }
-            hpyp.printConcentrations();
-            hpyp.printDiscounts();
+            System.out.println(hpyp.score(true));
 
-            for(int i = 0; i < 25; i++){
-                System.out.println(hpyp.sample(100));
-            }
-            hpyp.printConcentrations();
-            hpyp.printDiscounts();
+            oos = new ObjectOutputStream(new FileOutputStream(new File("/Users/nicholasbartlett/Desktop/hpyp.out")));
 
-            for(int i = 0; i < 25; i++){
-                System.out.println(hpyp.sample(10));
-            }
-            hpyp.printConcentrations();
-            hpyp.printDiscounts();*/
+            oos.writeObject(hpyp);
+
+            oos.close();
+ 
+            ois = new ObjectInputStream(new FileInputStream(new File("/Users/nicholasbartlett/Desktop/hpyp.out")));
+
+
+            IntHPYP h = (IntHPYP) ois.readObject();
+
+            System.out.println(h.score(true));
 
             hpyp.printConcentrations();
             hpyp.printDiscounts();
-            for(int i = 0; i < 1000; i++){
-                //System.out.println(hpyp.sample(1));
-                hpyp.sampleSeatingArrangements();
-                System.out.println(hpyp.score(true));
-            }
-            hpyp.printConcentrations();
-            hpyp.printDiscounts();
-
-            /*
-            for(int i = 0; i < 10; i++){
-                System.out.println(hpyp.sample(1));
-                hpyp.printConcentrations();
-                hpyp.printDiscounts();
-                System.out.println("i = " + i + "\n");
-            }
+            h.printConcentrations();
+            h.printDiscounts();
 
             for(int i = 0; i < 10; i++){
                 System.out.println(hpyp.sample(1));
-                hpyp.printConcentrations();
-                hpyp.printDiscounts();
-                System.out.println("i = " + i + "\n");
-            }*/
-
-            int length = 100;
-            int[] sample = new int[length];
-            for(int i = 0; i < length; i++){
-                context = new int[i];
-                for(int j = 0; j < i; j++){
-                    context[j] = sample[i - 1 - j];
-                }
-
-                sample[i] = hpyp.generate(context);
+                System.out.println(h.sample(1));
+                System.out.println();
             }
+            hpyp.printConcentrations();
+            hpyp.printDiscounts();
+            h.printConcentrations();
+            h.printDiscounts();
 
-            for(int i = 0; i < length; i++){
-                System.out.print((char) sample[i]);
-            }
-
-            /*
-            hpyp.removeEmptyNodes();
-            for(int i = 0; i < 2; i++){
-                System.out.println(hpyp.sample());
-                hpyp.printConcentrations();
-                hpyp.printDiscounts();
-                System.out.println("i = " + i + "\n");
-            }*/
-
-            
-            
         } finally {
-            bis.close();
+            if(bis != null){
+                bis.close();
+            }
+            ois.close();
+            
         }
     }
-    
+
 }

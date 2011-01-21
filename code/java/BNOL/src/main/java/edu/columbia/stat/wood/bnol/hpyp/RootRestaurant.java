@@ -9,8 +9,9 @@ import edu.columbia.stat.wood.bnol.util.IntDiscreteDistribution;
 import edu.columbia.stat.wood.bnol.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.bnol.util.MutableInt;
 import edu.columbia.stat.wood.bnol.util.Pair;
-import gnu.trove.iterator.TIntObjectIterator;
-import gnu.trove.map.hash.TIntObjectHashMap;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -23,6 +24,8 @@ import java.util.Map.Entry;
  */
 public class RootRestaurant extends Restaurant {
 
+    static final long serialVersionUID = 1 ;
+
     private IntDiscreteDistribution baseDistribution;
     private HashMap<Integer, MutableInt> customerCount;
 
@@ -32,6 +35,10 @@ public class RootRestaurant extends Restaurant {
         super(null, null, null);
         this.baseDistribution = baseDistribution;
         customerCount = new HashMap();
+    }
+
+    public RootRestaurant(){
+        super(null, null, null);
     }
 
     /***********************public methods*************************************/
@@ -203,5 +210,23 @@ public class RootRestaurant extends Restaurant {
     @Override
     public int impliedData(){
         return 0;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException{
+        out.writeObject(baseDistribution);
+        out.writeObject(customerCount);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void readExternal(ObjectInput in) throws ClassNotFoundException, IOException{
+        baseDistribution = (IntDiscreteDistribution) in.readObject();
+        customerCount = (HashMap<Integer, MutableInt>) in.readObject();
     }
 }

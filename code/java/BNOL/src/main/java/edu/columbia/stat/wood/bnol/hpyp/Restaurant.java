@@ -5,13 +5,20 @@
 
 package edu.columbia.stat.wood.bnol.hpyp;
 
+import edu.columbia.stat.wood.bnol.util.IntDiscreteDistribution;
 import edu.columbia.stat.wood.bnol.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.bnol.util.MutableDouble;
+import edu.columbia.stat.wood.bnol.util.MutableInt;
 import edu.columbia.stat.wood.bnol.util.Pair;
 import edu.columbia.stat.wood.bnol.util.SampleWithoutReplacement;
 import gnu.trove.iterator.TIntObjectIterator;
 import gnu.trove.map.hash.TIntObjectHashMap;
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.Arrays;
+import java.util.HashMap;
 
 /**
  * Restaurant object for a HPYP model.
@@ -19,7 +26,7 @@ import java.util.Arrays;
  */
 
 public class Restaurant extends TIntObjectHashMap<Restaurant> {
-    
+
     private int customers, tables;
     private Restaurant parent;
     private MutableDouble concentration, discount;
@@ -342,6 +349,66 @@ public class Restaurant extends TIntObjectHashMap<Restaurant> {
         return customers - c;
     }
 
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        throw new RuntimeException("this object cannot be serialized");
+    }
+
+    @Override
+    public void readExternal(ObjectInput in) throws ClassNotFoundException, IOException {
+        throw new RuntimeException("this object cannot be serialized");
+    }
+
+    public void serializeOut(ObjectOutput out) throws IOException {
+        out.writeInt(customers);
+        out.writeInt(tables);
+        out.writeInt(tableArrangements.size());
+
+        // write table arrangements
+        TIntObjectIterator<TSA> iterator = tableArrangements.iterator();
+        while(iterator.hasNext()){
+            iterator.advance();
+            out.writeInt(iterator.key());
+            out.writeObject(iterator.value());
+        }
+
+        // write children restaurants
+        out.writeInt(size());
+        TIntObjectIterator<Restaurant> iter = iterator();
+        while (iter.hasNext()){
+            iter.advance();
+            out.writeInt(iter.key());
+            iter.value().serializeOut(out);
+        }
+    }
+
+    public void serializeIn(ObjectInput in, int depth, MutableDouble[] discounts, MutableDouble[] concentrations) throws ClassNotFoundException, IOException {
+        customers = in.readInt();
+        tables = in.readInt();
+        int size = in.readInt();
+
+        // read in table arrangements
+        tableArrangements = new TIntObjectHashMap();
+        int key;
+        TSA value;
+        for(int i = 0; i < size; i++){
+            key = in.readInt();
+            value = (TSA) in.readObject();
+            tableArrangements.put(key,value);
+        }
+
+        // read in children restaurant
+        depth++;
+        size = in.readInt();
+        Restaurant child;
+        for(int i = 0; i < size; i++){
+            child = new Restaurant(this, concentrations[depth], discounts[depth]);
+            key = in.readInt();
+            put(key, child);
+            child.serializeIn(in, depth, discounts, concentrations);
+        }
+    }
+
     /***********************private methods************************************/
 
     /**
@@ -409,7 +476,9 @@ public class Restaurant extends TIntObjectHashMap<Restaurant> {
         return new Pair(typeOrder, tableOrder);
     }
     
-    private static class TSA {
+    private static class TSA implements Externalizable{
+
+        static final long serialVersionUID = 1 ;
 
         public int customers, tables;
         public int[] sa;
@@ -684,6 +753,18 @@ public class Restaurant extends TIntObjectHashMap<Restaurant> {
             assert t == tables : "table count is not correct : t = " + t + " : tables = " + tables;
 
             return c == customers && t == tables;
+        }
+
+        public void writeExternal(ObjectOutput out) throws IOException{
+            out.writeInt(customers);
+            out.writeInt(tables);
+            out.writeObject(sa);
+        }
+
+        public void readExternal(ObjectInput in) throws ClassNotFoundException, IOException{
+            customers = in.readInt();
+            tables = in.readInt();
+            sa = (int[]) in.readObject();
         }
     }
 }

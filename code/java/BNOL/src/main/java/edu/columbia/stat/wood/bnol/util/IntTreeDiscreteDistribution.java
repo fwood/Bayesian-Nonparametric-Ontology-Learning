@@ -12,7 +12,10 @@ import java.util.Iterator;
  * used in BNOL.
  * @author nicholasbartlett
  */
-public class IntTreeDiscreteDistribution implements IntDiscreteDistribution {
+public class IntTreeDiscreteDistribution extends IntDiscreteDistribution {
+
+    private static final long serialVersionUID = 1 ;
+    
     private MutableDouble b;
 
     /***********************constructor methods********************************/

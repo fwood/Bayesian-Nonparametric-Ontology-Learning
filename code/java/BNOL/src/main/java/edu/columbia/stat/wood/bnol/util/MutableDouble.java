@@ -5,11 +5,15 @@
 
 package edu.columbia.stat.wood.bnol.util;
 
+import java.io.Serializable;
+
 /**
  * Container class for double which can be set and manipulated.
  * @author nicholasbartlett
  */
-public class MutableDouble {
+public class MutableDouble implements Serializable {
+
+    static final long serialVersionUID = 1 ;
 
     private double value;
 
