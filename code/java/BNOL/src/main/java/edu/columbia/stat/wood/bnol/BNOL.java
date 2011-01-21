@@ -7,6 +7,7 @@ package edu.columbia.stat.wood.bnol;
 
 import edu.columbia.stat.wood.bnol.hpyp.HPYP;
 import edu.columbia.stat.wood.bnol.hpyp.IntHPYP;
+import edu.columbia.stat.wood.bnol.util.Context;
 import edu.columbia.stat.wood.bnol.util.GammaDistribution;
 import edu.columbia.stat.wood.bnol.util.IntGeometricDistribution;
 import edu.columbia.stat.wood.bnol.util.IntUniformDiscreteDistribution;
@@ -14,13 +15,16 @@ import edu.columbia.stat.wood.bnol.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.bnol.util.MutableDouble;
 import edu.columbia.stat.wood.bnol.util.MutableInt;
 import edu.columbia.stat.wood.bnol.util.Pair;
-import gnu.trove.iterator.TIntObjectIterator;
-import gnu.trove.map.hash.TIntObjectHashMap;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 
 /**
  *
@@ -28,54 +32,107 @@ import java.util.HashMap;
  */
 public class BNOL implements Serializable{
     
-    public static void main(String[] args){
+    public static void main(String[] args) throws IOException{
         //int[] words, int alphabetSize, int H, double b, double pForMachineStates, double pForMachineTransitions){
-        BNOL bb = new BNOL(new int[0], 5000, 10, 1d / 7d, 0.2, 0.2);
+        BNOL bb = new BNOL(new int[0], new int[0], 5000, 10, 1d / 7d, 0.2, 0.2, .3, .6);
         bb.generateFromScratch(10000);
 
-        System.out.print(bb.score() + ", ");
-        System.out.println(bb.meanAndVarEmissionLength()[0] + ", " + bb.meanAndVarEmissionLength()[1]);
-        System.out.println();
+        int[][] trueEmissions = new int[bb.emissions.length][];
+        for(int i = 0; i < bb.emissions.length; i++){
+            trueEmissions[i] = new int[bb.emissions[i].length];
+            System.arraycopy(bb.emissions[i], 0, trueEmissions[i], 0, bb.emissions[i].length);
+        }
 
-        BNOL b = new BNOL(bb.words, 5000, 10, 1d / 7d, 0.2, 0.2);
+        BNOL b = new BNOL(bb.words, new int[0], 5000, 10, 1d / 7d, 0.2, 0.2, .8, .9);
         b.initialize();
 
-        System.out.print(b.score() + ", ");
-        System.out.println(b.meanAndVarEmissionLength()[0] + ", " + b.meanAndVarEmissionLength()[1]);
-        
-        for(int i = 0; i < 1000; i++){
-            System.out.print(b.sample(1d) + ", ");
-            System.out.println(b.meanAndVarEmissionLength()[0] + ", " + b.meanAndVarEmissionLength()[1]);
-        }
+        double[] ac1 = bb.accuracyCompleteness(trueEmissions);
+        double[] ac2 = b.accuracyCompleteness(trueEmissions);
 
-        b.printEmissions(System.out);
-        
-        /*
-        for(int i = 0; i < 100; i++){
-            System.out.println(b.sample(1000) + ", " + b.meanAndVarEmissionLength()[0] + ", " + b.meanAndVarEmissionLength()[1]);
-        }
+        System.out.println(bb.score() + ", " + bb.uniqueEmbeddings() + ", " + ac1[0] + ", " + ac1[1] + ", " + b.score() + ", " + b.uniqueEmbeddings() + ", " + ac2[0] + ", " + ac2[1] + ", ,");
 
-        for(int i = 0; i < 100; i++){
-            System.out.println(b.sample(100) + ", " + b.meanAndVarEmissionLength()[0] + ", " + b.meanAndVarEmissionLength()[1]);
-        }
+        int output = 0;
+        ObjectOutputStream out_truth = null;
+        ObjectOutputStream out_rand = null;
 
-        for(int i = 0; i < 100; i++){
-            System.out.println(b.sample(10) + ", " + b.meanAndVarEmissionLength()[0] + ", " + b.meanAndVarEmissionLength()[1]);
-        }
+        double temp = 1000;
+        /*for(int i = 0; i < 100; i++){
+            if(i % 10 == 0){
+                out_truth = new ObjectOutputStream(new FileOutputStream(new File("/home/bartlett/BNOL/truth_" + output)));
+                out_rand = new ObjectOutputStream(new FileOutputStream(new File("/home/bartlett/BNOL/rand_" + output)));
+                out_truth.writeObject(bb);
+                out_rand.writeObject(b);
+                out_truth.close();
+                out_rand.close();
+                output++;
+            }
 
-        for(int i = 0; i < 1000; i++){
-            System.out.println(b.sample(1) + ", " + b.meanAndVarEmissionLength()[0] + ", " + b.meanAndVarEmissionLength()[1]);
+            System.out.println(bb.sample(temp) + ", " + bb.uniqueEmbeddings() + ", " + ac1[0] + ", " + ac1[1] + ", " + b.sample(temp) + ", " + b.uniqueEmbeddings() + ", " + ac2[0] + ", " + ac2[1] + ", " + temp + ", " + i);
+            ac1 = bb.accuracyCompleteness(trueEmissions);
+            ac2 = b.accuracyCompleteness(trueEmissions);
         }*/
-        
-        //b.printEmissions(System.out);
+
+        temp = 100;
+        for(int i = 0; i < 100; i++){
+            if(i % 10 == 0){
+                out_truth = new ObjectOutputStream(new FileOutputStream(new File("/home/bartlett/BNOL/truth_" + output)));
+                out_rand = new ObjectOutputStream(new FileOutputStream(new File("/home/bartlett/BNOL/rand_" + output)));
+                out_truth.writeObject(bb);
+                out_rand.writeObject(b);
+                out_truth.close();
+                out_rand.close();
+                output++;
+            }
+
+            System.out.println(bb.sample(temp) + ", " + bb.uniqueEmbeddings() + ", " + ac1[0] + ", " + ac1[1] + ", " + b.sample(temp) + ", " + b.uniqueEmbeddings() + ", " + ac2[0] + ", " + ac2[1] + ", " + temp + ", " + i);
+            ac1 = bb.accuracyCompleteness(trueEmissions);
+            ac2 = b.accuracyCompleteness(trueEmissions);
+        }
+
+        temp = 10;
+        for(int i = 0; i < 100; i++){
+            if(i % 10 == 0){
+                out_truth = new ObjectOutputStream(new FileOutputStream(new File("/home/bartlett/BNOL/truth_" + output)));
+                out_rand = new ObjectOutputStream(new FileOutputStream(new File("/home/bartlett/BNOL/rand_" + output)));
+                out_truth.writeObject(bb);
+                out_rand.writeObject(b);
+                out_truth.close();
+                out_rand.close();
+                output++;
+            }
+
+            System.out.println(bb.sample(temp) + ", " + bb.uniqueEmbeddings() + ", " + ac1[0] + ", " + ac1[1] + ", " + b.sample(temp) + ", " + b.uniqueEmbeddings() + ", " + ac2[0] + ", " + ac2[1] + ", " + temp + ", " + i);
+            ac1 = bb.accuracyCompleteness(trueEmissions);
+            ac2 = b.accuracyCompleteness(trueEmissions);
+        }
+
+        temp = 1;
+        for(int i = 0; i < 10000; i++){
+            if(i % 10 == 0){
+                out_truth = new ObjectOutputStream(new FileOutputStream(new File("/home/bartlett/BNOL/truth_" + output)));
+                out_rand = new ObjectOutputStream(new FileOutputStream(new File("/home/bartlett/BNOL/rand_" + output)));
+                out_truth.writeObject(bb);
+                out_rand.writeObject(b);
+                out_truth.close();
+                out_rand.close();
+                output++;
+            }
+            System.out.println(bb.sample(temp) + ", " + bb.uniqueEmbeddings() + ", " + ac1[0] + ", " + ac1[1] + ", " + b.sample(temp) + ", " + b.uniqueEmbeddings() + ", " + ac2[0] + ", " + ac2[1] + ", " + temp + ", " + i);
+            ac1 = bb.accuracyCompleteness(trueEmissions);
+            ac2 = b.accuracyCompleteness(trueEmissions);
+        }
     }
 
     private HashMap<Integer, Machine> machines;
     private S_EmissionDistribution emissionDistributions;
 
-    private int[] machineKeys;
-    private int[][] emissions;
+    public int[] machineKeys;
+    public int[][] emissions;
     public int[] words;
+
+    public int[] pMachineKeys;
+    public int[][] pEmissions;
+    public int[] pWords;
 
     private HPYP machineTransitions;
     private HPYP wordDistribution;
@@ -83,7 +140,7 @@ public class BNOL implements Serializable{
     private int H;
     private double b, pForMachineStates;
 
-    private MersenneTwisterFast rng = new MersenneTwisterFast(9);
+    public static MersenneTwisterFast rng = new MersenneTwisterFast(1);
 
     private double ll_emissions = 0.0;
     private double ll_machines = 0.0;
@@ -101,13 +158,17 @@ public class BNOL implements Serializable{
      * @param pForMachineStates probability of success for geometric distribution at base of machines
      * @param pForMachineTransitions probability of success for geometric distribution at base of machine transitions
      */
-    public BNOL(int[] words, int alphabetSize, int H, double b, double pForMachineStates, double pForMachineTransitions){
+    public BNOL(int[] trainingWords, int[] testWords, int alphabetSize, int H, double b, double pForMachineStates, double pForMachineTransitions, double d0, double d1){
         machines = new HashMap();
-        emissionDistributions = new S_EmissionDistribution(b, .1, .2, 1, 1);
+        emissionDistributions = new S_EmissionDistribution(b, d0, d1, 10, 1);
 
-        machineKeys = new int[words.length];
-        emissions = new int[words.length][];
-        this.words = words;
+        machineKeys = new int[trainingWords.length];
+        emissions = new int[trainingWords.length][];
+        words = trainingWords;
+
+        pMachineKeys = new int[testWords.length];
+        pEmissions = new int[testWords.length][];
+        pWords = testWords;
         
         MutableDouble[] conc = new MutableDouble[2];
         MutableDouble[] disc = new MutableDouble[2];
@@ -169,6 +230,16 @@ public class BNOL implements Serializable{
         return new double[]{m,var};
     }
 
+    public int uniqueEmbeddings(){
+        HashSet<Context> embeddings = new HashSet();
+
+        for(int[] embedding : emissions){
+            embeddings.add(new Context(embedding));
+        }
+        
+        return embeddings.size();
+    }
+
     public double score(){
         ll_machine_transitions = machineTransitions.score(true);
 
@@ -216,7 +287,7 @@ public class BNOL implements Serializable{
      */
     public void sampleEmissions(double temp){
         for(int i = 0; i < words.length; i++){
-            sampleEmission(i);
+            sampleEmission(i, temp);
         }
     }
 
@@ -315,36 +386,125 @@ public class BNOL implements Serializable{
         }
     }
 
-    public void accuracyCompleteness(int[][] trueEmissions){
+    public double[] accuracyCompleteness(int[][] trueEmissions){
         assert trueEmissions.length == emissions.length;
 
-        Pair<MutableInt, MutableInt> aParentChild = new Pair(new MutableInt(0), new MutableInt(0));
-        Pair<MutableInt, MutableInt> cParentChild = new Pair(new MutableInt(0), new MutableInt(0));
+        Pair<MutableInt, MutableInt> aParent = new Pair(new MutableInt(0), new MutableInt(0));
+        Pair<MutableInt, MutableInt> cParent = new Pair(new MutableInt(0), new MutableInt(0));
 
-        Pair<ArrayList<MutableInt>, ArrayList<MutableInt>> aGrouping = new Pair(new ArrayList(), new ArrayList());
-        Pair<ArrayList<MutableInt>, ArrayList<MutableInt>> cGrouping = new Pair(new ArrayList(), new ArrayList());
+        Pair<ArrayList<MutableInt>, ArrayList<MutableInt>> aOverlap = new Pair(new ArrayList(), new ArrayList());
+        Pair<ArrayList<MutableInt>, ArrayList<MutableInt>> cOverlap = new Pair(new ArrayList(), new ArrayList());
 
-        
+        int maxLengthEmission = 0;
+        for(int i = 0; i < emissions.length; i++){
+            maxLengthEmission = maxLengthEmission > emissions[i].length ? maxLengthEmission : emissions[i].length;
+            maxLengthEmission = maxLengthEmission > trueEmissions[i].length ? maxLengthEmission : trueEmissions[i].length;
+        }
 
+        for(int i = 0; i < maxLengthEmission; i++){
+            aOverlap.first().add(new MutableInt(0));
+            aOverlap.second().add(new MutableInt(0));
+            cOverlap.first().add(new MutableInt(0));
+            cOverlap.second().add(new MutableInt(0));
+        }
 
         for(int i = 0; i < emissions.length; i++){
             for(int j = (i + 1); j < emissions.length; j++){
 
-                if (emissions[i].length < emissions[j].length){
-                    for(int k = 0; k < emissions[i].length; k++){
-                        if(emissions[i][k] == emissions[j][k]){
-                            aGrouping.first().get(k).increment();
-                            
-                        }
+                int overlap0 = overlap(emissions[i], emissions[j]);
+                int overlap1 = overlap(trueEmissions[i], trueEmissions[j]);
+
+                for(int k = 0; k < overlap0; k++){
+                    aOverlap.first().get(k).increment();
+                    if(k <= overlap1){
+                        aOverlap.second().get(k).increment();
                     }
                 }
 
+                for(int k = 0; k < overlap1; k++){
+                    cOverlap.second().get(k).increment();
+                    if(k <= overlap0){
+                        cOverlap.first().get(k).increment();
+                    }
+                }
+
+                int isParent0 = isParent(emissions[i], emissions[j]);
+                int isParent1 = isParent(trueEmissions[i], trueEmissions[j]);
+
+                if(isParent0 != -1){
+                    aParent.first().increment();
+                    if(isParent1 == isParent0){
+                        aParent.second().increment();
+                    }
+                }
                 
-
-
-
-
+                if(isParent1 != -1){
+                    cParent.second().increment();
+                    if(isParent1 == isParent0){
+                        cParent.first().increment();
+                    }
+                }
             }
+        }
+
+        double a = ((double) aParent.second().value() )/ ((double) aParent.first().value());
+        double c = ((double) cParent.first().value() )/ ((double) cParent.second().value());
+
+        return new double[]{a,c};
+    }
+    
+    public double logProbTest(int numberForwardSamples){
+        int[][] emissions = new int[pWords.length + H][];
+        for(int i = 0; i < H; i++){
+            emissions[i] = this.emissions[this.emissions.length - H + i];
+        }
+
+        int[] machineKeys = new int[pWords.length + H];
+        System.arraycopy(this.machineKeys, this.machineKeys.length - H, machineKeys, 0, H);
+        
+
+        int machineKey, machineState;
+        int[] embedding;
+        double probWord, logProb = 0.0, p = 0.0, q, maxP;
+        
+        for(int i = 0; i < pWords.length; i++){
+            p = 0.0;
+            maxP = 0.0;
+            for(int j = 0; j < numberForwardSamples; j++){
+                machineKey = machineTransitions.generate(machineKeys[H-1 + i]);
+                embedding = emissionDistributions.generate(machineGet(machineKey).get(emissions, H + i), 0, 1).first();
+                
+                q = wordDistribution.prob(embedding, pWords[j]);
+                p += q;
+                if(p > maxP){
+                    machineKeys[H + i] = machineKey;
+                    emissions[H + i] = embedding;
+                }
+            }
+            p = p / (double) numberForwardSamples;
+            logProb += Math.log(p);
+        }
+
+        System.arraycopy(machineKeys, H, pMachineKeys, 0, pMachineKeys.length);
+        System.arraycopy(emissions, H, pEmissions, 0, pMachineKeys.length);
+
+        return logProb;
+    }
+
+    /***********************private methods************************************/
+
+    private int overlap(int[] a, int[] b){
+        if(a.length == 0 && b.length == 0){
+            return 0;
+        } else {
+            int l = Math.min(a.length, b.length);
+            int overlap =  -1;
+            for(int i = 0; i < l; i++){
+                if(a[i] == b[i]){
+                    overlap++;
+                }
+            }
+            return overlap;
         }
     }
 
@@ -367,14 +527,11 @@ public class BNOL implements Serializable{
         }
     }
 
-
-    /***********************private methods************************************/
-
     /**
      * Sample the emission indexed by the given index using a slice sampler.
      * @param index index of emission to sample.
      */
-    private void sampleEmission(int index){
+    private void sampleEmission(int index, double temp){
         double low = 0.0, high = 1.0;
 
         int[] currentEmission = emissions[index];
@@ -396,6 +553,7 @@ public class BNOL implements Serializable{
             emissions[index] = pair.first();
 
             proposedProb = Math.exp(emissionProbability(index) + Math.log(wordDistribution.prob(emissions[index], words[index])) + adjustment);
+            proposedProb = 100d * Math.pow(proposedProb / 100d, 1d / temp);
 
             if(proposedProb < randomNumber){
                 int comparison = compareEmissionAToB(emissions[index], currentEmission);

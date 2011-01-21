@@ -35,7 +35,7 @@ public class S_EmissionDistribution implements Externalizable {
     private IntTreeDiscreteDistribution baseDist;
     private MutableDouble[] discounts, concentrations;
     private GammaDistribution concentrationPrior;
-    private MersenneTwisterFast rng = new MersenneTwisterFast(5);
+    private MersenneTwisterFast rng = BNOL.rng; //new MersenneTwisterFast(5);
     
     /***********************constructor methods********************************/
 

@@ -4,6 +4,7 @@
  */
 package edu.columbia.stat.wood.bnol.hpyp;
 
+import edu.columbia.stat.wood.bnol.BNOL;
 import edu.columbia.stat.wood.bnol.util.Context;
 import edu.columbia.stat.wood.bnol.util.GammaDistribution;
 import edu.columbia.stat.wood.bnol.util.IntDiscreteDistribution;
@@ -73,7 +74,8 @@ public class IntHPYP extends HPYP {
         this.concentrationPrior = concentrationPrior;
         root = new RootRestaurant(baseDistribution);
         ecr = new Restaurant(root, this.concentrations[0], this.discounts[0]);
-        rng = new MersenneTwisterFast(3);
+        //rng = new MersenneTwisterFast(3);
+        rng = BNOL.rng;
     }
 
     public IntHPYP(){};

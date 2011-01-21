@@ -40,7 +40,8 @@ public class Machine implements Serializable{
     public Machine(int key, int H, double p){
         this.key = key;
         this.H = H;
-        rng = new MersenneTwisterFast(7);
+        //rng = new MersenneTwisterFast(7);
+        rng = BNOL.rng;
 
         // the number 11 here is totally arbitrary
         MutableDouble[] discounts = new MutableDouble[11];
@@ -313,7 +314,7 @@ public class Machine implements Serializable{
     /**
      * Convenient class to hold the state emission pairs for the delta map.
      */
-    private class StateEmissionPair {
+    private static class StateEmissionPair implements Serializable{
         int state;
         int[] emission;
 
