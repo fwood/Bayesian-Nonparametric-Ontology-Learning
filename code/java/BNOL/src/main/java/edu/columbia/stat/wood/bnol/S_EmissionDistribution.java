@@ -14,15 +14,9 @@ import edu.columbia.stat.wood.bnol.util.MutableInt;
 import edu.columbia.stat.wood.bnol.util.Pair;
 import gnu.trove.list.array.TIntArrayList;
 import java.io.Externalizable;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInput;
-import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
-import java.io.ObjectOutputStream;
-import java.util.Arrays;
 
 /**
  * Emission distribution for the latent binary state variables used in BNOL.
@@ -33,7 +27,7 @@ public class S_EmissionDistribution implements Externalizable {
 
     private Node baseNode;
     private IntTreeDiscreteDistribution baseDist;
-    private MutableDouble[] discounts, concentrations;
+    public MutableDouble[] discounts, concentrations;
     private GammaDistribution concentrationPrior;
     private MersenneTwisterFast rng = BNOL.rng; //new MersenneTwisterFast(5);
     
@@ -209,6 +203,11 @@ public class S_EmissionDistribution implements Externalizable {
         //System.out.print(discounts[0].value() + ", " + discounts[1].value() +
           //      ", " + concentrations[0].value() + ", " + concentrations[1].value() + ", ");
         return sampleHyperParameters(temp);
+    }
+
+    public double sampleSeatingArrangements(){
+        sampleSeatingArrangements(baseNode);
+        return score();
     }
 
     /**

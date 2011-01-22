@@ -33,9 +33,81 @@ import java.util.HashSet;
 public class BNOL implements Serializable{
     
     public static void main(String[] args) throws IOException{
+        BNOL b = new BNOL(new int[0], new int[0], 5000, 10, .1, 0.2, 0.2, .5, .8);
+        b.generateFromScratch(10000,0);
+
+        System.out.println("In this test we sampled from the prior and then fixed the actual emissions \n"
+                + "and sampled only the machine keys and machines");
+
+        System.out.println(b.score() + ", " + b.machines.size());
+        for(int i = 0; i < 1000; i++){
+            System.out.println(b.sample(1.0) + ", " + b.machines.size());
+        }
+    }
+
+
+    public static void main0(String[] args) throws IOException{
+
+        //ProcessCHILDES pc = new ProcessCHILDES(new File("/home/bartlett/BNOL/_CHILDES.parsed.txt"));
+        /*ProcessCHILDES pc = new ProcessCHILDES(new File("/Users/nicholasbartlett/Documents/np_bayes/Bayesian_Nonparametric_Ontology_Learning/data/_CHILDES.parsed.txt"));
+
+        int[] allWords = pc.get(1100);
+        int[] words = new int[1000];
+        System.arraycopy(allWords,0, words,0,1000);
+        int[] pWords = new int[100];
+        System.arraycopy(allWords,1000,words, 0, 100);
+
+        BNOL b = new BNOL(words, pWords, pc.dictionary().size(),10, .1, 0.2, 0.2, .8, .9);
+        b.initialize();*/
+
+        BNOL b = new BNOL(new int[0], new int[0], 5000, 10, .1, 0.2, 0.2, .5, .8);
+        b.generateFromScratch(10000,0);
+
+        b.emissionDistributions.concentrations = new MutableDouble[]{new MutableDouble(0.01), new MutableDouble(0.01)};
+        b.emissionDistributions.discounts = new MutableDouble[]{new MutableDouble(0.01), new MutableDouble(0.01)};
+
+        System.out.println("For this set of samples we generate from scration 10k observations with context \n"
+                + "length of 10 and b = .1.  Then, we set the discounts and concentrations for the s_emission distribution \n"
+                + "really small (0.01) and sample the model starting at the truth, not sampling the hyper parameters of \n"
+                + "either the word emission distribution or the s_emission distribution.  The first line is the truth \n"
+                + "and is prior to any sampling steps");
+
+        System.out.println(b.score() + ", " + b.uniqueEmbeddings());
+        for(int i = 0; i < 1000; i++){
+            System.out.println(b.sample(1.0) + ", " + b.uniqueEmbeddings());
+        }
+
+        //b.generateFromScratch(10000, 100);
+        //System.out.println((b.logProbTest(100) / Math.log(2) / 100d) + ", " + b.uniqueEmbeddings());
+        
+        /*System.out.println();
+        for(int i = 0; i < 100; i++){
+            System.out.println((b.logProbTest(100) / Math.log(2) / 100d) + ", " + b.uniqueEmbeddings() + ", " + b.sample(1.0));
+        }*/
+        
+
+        
+        /*
+        BNOL b = new BNOL(pc.get(10000), new int[0], pc.dictionary().size(), 10, 1d / 7d, 0.2, 0.2, .8, .9);
+        b.initialize();
+
+        ObjectOutputStream out = null;
+
+        System.out.println(b.score() + ", " + b.uniqueEmbeddings() + ", -1" );
+        for (int i = 0; i < 10000; i++){
+            System.out.println(b.sample(1.0) + ", " + b.uniqueEmbeddings() + ", " + i);
+            if(i % 10 == 0){
+                out = new ObjectOutputStream(new FileOutputStream(new File("/home/bartlett/BNOL/_CHILDES_short.ser")));
+                out.writeObject(b);
+                out.close();
+            }
+        }*/
+    }
+
+    public static void mainA(String[] args) throws IOException{
         //int[] words, int alphabetSize, int H, double b, double pForMachineStates, double pForMachineTransitions){
         BNOL bb = new BNOL(new int[0], new int[0], 5000, 10, 1d / 7d, 0.2, 0.2, .3, .6);
-        bb.generateFromScratch(10000);
+        bb.generateFromScratch(10000,0);
 
         int[][] trueEmissions = new int[bb.emissions.length][];
         for(int i = 0; i < bb.emissions.length; i++){
@@ -208,6 +280,18 @@ public class BNOL implements Serializable{
         disc[9] = new MutableDouble(.9);
         disc[10] = new MutableDouble(.95);
 
+        /*disc[0] = new MutableDouble(.7);
+        disc[1] = new MutableDouble(.8);
+        disc[2] = new MutableDouble(.85);
+        disc[3] = new MutableDouble(.9);
+        disc[4] = new MutableDouble(.9);
+        disc[5] = new MutableDouble(.9);
+        disc[6] = new MutableDouble(.9);
+        disc[7] = new MutableDouble(.95);
+        disc[8] = new MutableDouble(.95);
+        disc[9] = new MutableDouble(.95);
+        disc[10] = new MutableDouble(.95);*/
+
         wordDistribution = new IntHPYP(disc, conc, new IntUniformDiscreteDistribution(alphabetSize), new GammaDistribution(1d,100d));
 
         this.H = H;
@@ -262,12 +346,14 @@ public class BNOL implements Serializable{
 
         ll_machines = sampleMachines(temp);
 
-        ll_emissions = emissionDistributions.sample(10, temp);
+        ll_emissions = emissionDistributions.sampleSeatingArrangements(); //emissionDistributions.sample(10, temp);
 
         sampleEmissions(temp);
 
         ll_words = wordDistribution.sample(temp);
-        
+        wordDistribution.sampleSeatingArrangements();
+        ll_words = wordDistribution.score(true);
+
         return ll_emissions + ll_words + ll_machines + ll_machine_transitions;
     }
     
@@ -328,32 +414,44 @@ public class BNOL implements Serializable{
      * @param pForMachineTransitions parameter for geometric distribution
      * @return pair, first of which is generated binary emission vectors, second of which is words
      */
-    public void generateFromScratch(int length){
-
+    public void generateFromScratch(int length, int testLength){
+        
         machineKeys = new int[length];
         emissions = new int[length][];
         words = new int[length];
 
-        machineKeys[0] = machineTransitions.draw(null);
-        Machine m = new Machine(machineKeys[0], H, pForMachineStates);
-        machines.put(machineKeys[0], m);
-        int machineState = m.get(emissions, 0);
-        emissions[0] = emissionDistributions.generate(machineState, 0.0, 1.0).first();
-        emissionDistributions.seat(machineState, emissions[0]);
-        words[0] = wordDistribution.draw(emissions[0]);
-
-        for(int i = 1; i < length; i++){
-            machineKeys[i] = machineTransitions.draw(machineKeys[i-1]);
-            m = machines.get(machineKeys[i]);
-            if(m == null){
-                machines.put(machineKeys[i], m = new Machine(machineKeys[i], H, pForMachineStates));
+        int machineState;
+        for(int i = 0; i < length; i++){
+            if (i == 0){
+                machineKeys[0] = machineTransitions.draw(null);
+            } else {
+                machineKeys[i] = machineTransitions.draw(machineKeys[i-1]);
             }
-            machineState = m.get(emissions, i);
+            machineState = machineGet(machineKeys[i]).get(emissions, i);
 
+            // draw next emission
             emissions[i] = emissionDistributions.generate(machineState, 0.0, 1.0).first();
             emissionDistributions.seat(machineState, emissions[i]);
 
+            // draw and seat word
             words[i] = wordDistribution.draw(emissions[i]);
+        }
+
+        pMachineKeys = new int[testLength];
+        pEmissions = new int[testLength][];
+        pWords = new int[testLength];
+
+        for(int i = 0; i < testLength; i++){
+            if (i == 0){
+                pMachineKeys[i] = machineTransitions.generate(machineKeys[length - 1]);
+            } else {
+                pMachineKeys[i] = machineTransitions.generate(pMachineKeys[i - 1]);
+            }
+            machineState = machineGet(machineKeys[i]).get(emissions, i);
+
+            pEmissions[i] = emissionDistributions.generate(machineState, 0d, 1d).first();
+
+            pWords[i] = wordDistribution.generate(pEmissions[i]);
         }
     }
 
@@ -361,20 +459,15 @@ public class BNOL implements Serializable{
      * Initializes the arrays, assuming the words are set.
      */
     public void initialize(){
-        // draw first machine key, create that machine, and get the machine state
-        machineKeys[0] = machineTransitions.draw(null);
-        int machineState = machineGet(machineKeys[0]).get(emissions, 0);
-
-        // generate first emission and seat it in the emission distribution
-        emissions[0] = emissionDistributions.generate(machineState, 0.0, 1.0).first();
-        emissionDistributions.seat(machineState, emissions[0]);
-
-        wordDistribution.seat(emissions[0], words[0]);
-
+        int machineState;
         // repeat the generative process forwards until the end
-        for(int i = 1; i < words.length; i++){
+        for(int i = 0; i < words.length; i++){
             //draw next machine key and get the machine state
-            machineKeys[i] = machineTransitions.draw(machineKeys[i - 1]);
+            if(i == 0){
+                machineKeys[0] = machineTransitions.draw(null);
+            } else {
+                machineKeys[i] = machineTransitions.draw(machineKeys[i - 1]);
+            }
             machineState = machineGet(machineKeys[i]).get(emissions, i);
 
             // draw the next emission
@@ -474,7 +567,7 @@ public class BNOL implements Serializable{
                 machineKey = machineTransitions.generate(machineKeys[H-1 + i]);
                 embedding = emissionDistributions.generate(machineGet(machineKey).get(emissions, H + i), 0, 1).first();
                 
-                q = wordDistribution.prob(embedding, pWords[j]);
+                q = wordDistribution.prob(embedding, pWords[i]);
                 p += q;
                 if(p > maxP){
                     machineKeys[H + i] = machineKey;
@@ -567,21 +660,23 @@ public class BNOL implements Serializable{
             }
         }
 
-        int[] newMachineStates = new int[Math.min(H, words.length - 1 - index)];
-        for(int i = 0; i < newMachineStates.length; i++){
-            newMachineStates[i] = machineGet(machineKeys[index + 1 + i]).get(emissions, index + 1 + i);
-        }
+        if (!Arrays.equals(currentEmission, emissions[index])) {
+            int[] newMachineStates = new int[Math.min(H, words.length - 1 - index)];
+            for (int i = 0; i < newMachineStates.length; i++) {
+                newMachineStates[i] = machineGet(machineKeys[index + 1 + i]).get(emissions, index + 1 + i);
+            }
 
-        emissionDistributions.unseat(thisMachineState, currentEmission);
-        emissionDistributions.seat(thisMachineState, emissions[index]);
+            emissionDistributions.unseat(thisMachineState, currentEmission);
+            emissionDistributions.seat(thisMachineState, emissions[index]);
 
-        wordDistribution.unseat(currentEmission, words[index]);
-        wordDistribution.seat(emissions[index], words[index]);
+            wordDistribution.unseat(currentEmission, words[index]);
+            wordDistribution.seat(emissions[index], words[index]);
 
-        for(int i = 0; i < newMachineStates.length; i++){
-            if(newMachineStates[i] != currentMachineStates[i]){
-                emissionDistributions.unseat(currentMachineStates[i],emissions[index + 1 + i]);
-                emissionDistributions.seat(newMachineStates[i],emissions[index + 1 + i]);
+            for (int i = 0; i < newMachineStates.length; i++) {
+                if (newMachineStates[i] != currentMachineStates[i]) {
+                    emissionDistributions.unseat(currentMachineStates[i], emissions[index + 1 + i]);
+                    emissionDistributions.seat(newMachineStates[i], emissions[index + 1 + i]);
+                }
             }
         }
     }
@@ -594,12 +689,12 @@ public class BNOL implements Serializable{
      */
     private double emissionProbability(int index){
         int i = 0;
-        double prob = 0.0;
+        double logProb = 0.0;
         while(i < H && (index + i) < words.length){
-            prob += emissionDistributions.logProbability(machineGet(machineKeys[index + i]).get(emissions, index + i), emissions[index + i]);
+            logProb += emissionDistributions.logProbability(machineGet(machineKeys[index + i]).get(emissions, index + i), emissions[index + i]);
             i++;
         }
-        return prob;
+        return logProb;
     }
 
     /**
