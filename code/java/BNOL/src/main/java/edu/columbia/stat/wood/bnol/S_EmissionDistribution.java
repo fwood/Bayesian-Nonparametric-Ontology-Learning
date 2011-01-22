@@ -7,39 +7,50 @@ package edu.columbia.stat.wood.bnol;
 
 import edu.columbia.stat.wood.bnol.hpyp.IntHPYP;
 import edu.columbia.stat.wood.bnol.util.GammaDistribution;
-import edu.columbia.stat.wood.bnol.util.IntTreeDiscreteDistribution;
+import edu.columbia.stat.wood.bnol.util.IntUniformDiscreteDistribution;
 import edu.columbia.stat.wood.bnol.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.bnol.util.MutableDouble;
 import edu.columbia.stat.wood.bnol.util.MutableInt;
 import edu.columbia.stat.wood.bnol.util.Pair;
-import gnu.trove.list.array.TIntArrayList;
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
+import gnu.trove.TIntArrayList;
+import java.util.Arrays;
 
 /**
- * Emission distribution for the latent binary state variables used in BNOL.
+ *
  * @author nicholasbartlett
  */
+public class S_EmissionDistribution_fixed {
 
-public class S_EmissionDistribution implements Externalizable {
+    /*
+    public static void main(String[] args) {
+        S_EmissionDistribution2 ed = new S_EmissionDistribution2(new MutableDouble(0.1), 15);
+
+        double low = 0.300001, high = .300004;
+        Pair<int[], Double> emission = ed.generate(0, low, high);
+        System.out.println(Arrays.toString(emission.first()));
+
+        emission = ed.generate(0, low, high);
+        System.out.println(Arrays.toString(emission.first()));
+
+        emission = ed.generate(0, low, high);
+        System.out.println(Arrays.toString(emission.first()));
+
+        emission = ed.generate(0, low, high);
+        System.out.println(Arrays.toString(emission.first()));
+
+        emission = ed.generate(0, low, high);
+        System.out.println(Arrays.toString(emission.first()));
+    }*/
 
     private Node baseNode;
-    private IntTreeDiscreteDistribution baseDist;
-    public MutableDouble[] discounts, concentrations;
+    private IntUniformDiscreteDistribution baseDist;
+    private MutableDouble[] discounts, concentrations;
     private GammaDistribution concentrationPrior;
-    private MersenneTwisterFast rng = BNOL.rng; //new MersenneTwisterFast(5);
-    
-    /***********************constructor methods********************************/
+    private MersenneTwisterFast rng = new MersenneTwisterFast(5);
+    private int length;
 
-    /**
-     * Basic constructor method.  In the method are hard coded priors which could
-     * be changed if these are not working well.
-     * @param b initial b used as the base distribution on the emissions at each node
-     */
-    public S_EmissionDistribution(double b){
-        if(b > 1.0 || b < 0.0){
+    public S_EmissionDistribution_fixed(MutableDouble b, int length){
+        if(b.value() > 1.0 || b.value() < 0.0){
             throw new IllegalArgumentException("b must be in 0 - 1");
         }
 
@@ -47,153 +58,104 @@ public class S_EmissionDistribution implements Externalizable {
         concentrations = new MutableDouble[]{new MutableDouble(8.0), new MutableDouble(1.0)};
 
         concentrationPrior = new GammaDistribution(1.0,100.0);
-        baseDist = new IntTreeDiscreteDistribution(b);
+        baseDist = new IntUniformDiscreteDistribution(2);
         baseNode = new Node();
+        this.length = length;
     }
 
-    public S_EmissionDistribution(double b, double d0, double d1, double c0, double c1){
-        if(b > 1.0 || b < 0.0){
+    public S_EmissionDistribution_fixed(MutableDouble b, int length, double d0, double d1, double c0, double c1){
+        if(b.value() > 1.0 || b.value() < 0.0){
             throw new IllegalArgumentException("b must be in 0 - 1");
         }
 
         discounts = new MutableDouble[]{new MutableDouble(d0), new MutableDouble(d1)};
         concentrations = new MutableDouble[]{new MutableDouble(c0), new MutableDouble(c1)};
         concentrationPrior = new GammaDistribution(1.0,100.0);
-        baseDist = new IntTreeDiscreteDistribution(b);
+        baseDist = new IntUniformDiscreteDistribution(2);
         baseNode = new Node();
+        this.length = length;
     }
 
-    public S_EmissionDistribution(){}
-
-    /***********************public methods*************************************/
-
-    /**
-     * Gets the log probability of a given emission s from a given machine state.
-     * @param machineState given machine state
-     * @param s emitted s value, int vector of 0,1
-     * @return log probability of s in context of machineState
-     */
     public double logProbability(int machineState, int[] s){
+        assert s.length == length;
         int[] context = new int[]{machineState};
         Node currentNode = baseNode;
 
         double logProbability = 0d;
         for(int i = 0; i < s.length; i++){
             logProbability += Math.log(currentNode.prob(context, s[i]));
-            currentNode = currentNode.get(s[i]);
+            if (i < (s.length - 1)) currentNode = currentNode.get(s[i]);
         }
 
-        return logProbability + Math.log(currentNode.prob(context, -1));
+        return logProbability;
     }
 
-    /**
-     * Generate a binary state vector from the appropriate emission distribution
-     * given the machine state and using the slice provided.
-     * @param machineState machine state
-     * @param low low edge of slice
-     * @param high high edge of slice
-     * @return sampled vector
-     */
     public Pair<int[], Double> generate(int machineState, double low, double high){
         TIntArrayList out = new TIntArrayList();
 
         int[] context = new int[]{machineState};
 
         Node currentNode = baseNode;
-        
+
         int emission;
         double cuSum, cuSumLast;
         double randomNumber = rng.nextDouble() * (high - low) + low;
         double startRandomNumber = randomNumber;
-        while(true){
-            emission = -2;
-            cuSum = 0.0;
-            cuSumLast = cuSum;
-            for(int i = 0; i < 3; i++){
-                cuSum += currentNode.prob(context, ++emission);
-                if(cuSum > randomNumber){
-                    break;
-                }
-                cuSumLast = cuSum;
-            }
+        double expandFactor;
+        for(int j = 0; j < length; j++){
+            cuSum = currentNode.prob(context, 0);
 
-            assert cuSum > randomNumber;
-
-            if (emission == -1) {
-                break;
+            if(cuSum > randomNumber){
+                emission = 0;
+                cuSumLast = 0.0;
             } else {
-                out.add(emission);
-                currentNode = currentNode.get(emission);
-
-                // shift numbers based on expansion of section chosen
-                double expandFactor = 1.0 / (cuSum - cuSumLast);
-                high = high >= cuSum ? 1.0 : ((high - cuSumLast) * expandFactor);
-                low = low <= cuSumLast ? 0.0 : ((low - cuSumLast) * expandFactor);
-                randomNumber = (randomNumber - cuSumLast) * expandFactor;
-
-                assert high <= 1.0;
-                assert low >= 0.0;
-                assert randomNumber >= low && randomNumber <= high : randomNumber + ", " + low + ", " + high;
+                emission = 1;
+                cuSumLast = cuSum;
+                cuSum = 1.0;
             }
+
+            out.add(emission);
+            if (j < (length - 1)) currentNode = currentNode.get(emission);
+
+            expandFactor = 1.0 / (cuSum - cuSumLast);
+
+            high = high >= cuSum ? 1.0 : ((high - cuSumLast) * expandFactor);
+            low = low <= cuSumLast ? 0.0 : ((low - cuSumLast) * expandFactor);
+            randomNumber = (randomNumber - cuSumLast) * expandFactor;
+
+            assert high <= 1.0;
+            assert low >= 0.0;
+            assert randomNumber >= low && randomNumber <= high : randomNumber + ", " + low + ", " + high;
         }
 
-        assert emission == -1;
-        
-        return new Pair(out.toArray(), startRandomNumber);
+        return new Pair(out.toNativeArray(), startRandomNumber);
     }
 
-    /**
-     * Seats all the counts in the emission vector s with the given machine
-     * state.
-     * @param machineState machine state
-     * @param s emission
-     */
     public void seat(int machineState, int[] s){
         int[] context = new int[]{machineState};
         Node currentNode = baseNode;
 
         for (int i = 0; i < s.length; i++){
             currentNode.seat(context, s[i]);
-            currentNode = currentNode.get(s[i]);
+            if (i < (s.length - 1)) currentNode = currentNode.get(s[i]);
         }
-
-        currentNode.seat(context, -1);
     }
 
-    /**
-     * Un-seats the counts in the emission vector s with the given machine
-     * state.
-     * @param machineState machine state
-     * @param s emission
-     */
     public void unseat(int machineState, int[] s){
         int[] context = new int[]{machineState};
         Node currentNode = baseNode;
 
         for (int i = 0; i < s.length; i++){
             currentNode.unseat(context, s[i]);
-            currentNode = currentNode.get(s[i]);
+            if (i < (s.length - 1)) currentNode = currentNode.get(s[i]);
         }
-
-        currentNode.unseat(context, -1);
     }
 
-    /**
-     * Gets the joint log likelihood of the data and model.
-     * @return joint log likelihood
-     */
     public double score(){
         double[] score = scoreByDepth();
         return score[0] + score[1];
     }
 
-    /**
-     * Samples all the HPYP objects in the tree a given number times and returns
-     * the joint log likelihood of the data and model.
-     * @param sweeps number of Gibb's sweeps
-     * @param temp temperature of sampling steps
-     * @return joint log likelihood
-     */
     public double sample(int sweeps, double temp){
         for(int i = 0; i < (sweeps - 1); i++){
             sampleSeatingArrangements(baseNode);
@@ -205,69 +167,22 @@ public class S_EmissionDistribution implements Externalizable {
         return sampleHyperParameters(temp);
     }
 
-    public double sampleSeatingArrangements(){
-        sampleSeatingArrangements(baseNode);
-        return score();
-    }
-
-    /**
-     * Removes nodes from the tree which are empty.  Also, calls for the removal
-     * of empty HPYP nodes at each non-empty node on the tree.
-     */
     public void removeEmptyNodes(){
         removeEmptyNodes(baseNode);
     }
 
-    /**
-     * Indicator that there are no counts in the distribution tree
-     * @return true if the distribution tree is empty, else false
-     */
     public boolean isEmpty(){
         return baseNode.isEmpty();
     }
 
-    /**
-     * Gets the number of nodes in the tree.
-     * @return node count
-     */
     public int nodeCount(){
         MutableInt nodeCount = new MutableInt(0);
         nodeCount(baseNode, nodeCount);
         return nodeCount.value();
     }
 
-    /*private Node baseNode;
-    private IntTreeDiscreteDistribution baseDist;
-    private MutableDouble[] discounts, concentrations;
-    private GammaDistribution concentrationPrior;
-    private MersenneTwisterFast rng = new MersenneTwisterFast(5);*/
-
-    public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeObject(baseDist);
-        out.writeObject(concentrations);
-        out.writeObject(discounts);
-        out.writeObject(concentrationPrior);
-        out.writeObject(rng);
-        baseNode.serializeOut(out);
-    }
-
-    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        baseDist = (IntTreeDiscreteDistribution) in.readObject();
-        concentrations = (MutableDouble[]) in.readObject();
-        discounts = (MutableDouble[]) in.readObject();
-        concentrationPrior = (GammaDistribution) in.readObject();
-        rng = (MersenneTwisterFast) in.readObject();
-        baseNode = new Node(0);
-        baseNode.serializeIn(in);
-    }
-
     /***********************private methods************************************/
-
-    /**
-     * Recursive function to count the number of nodes in this tree.
-     * @param currentNode current node of recursion
-     * @param count running count of nodes
-     */
+    
     private void nodeCount(Node currentNode, MutableInt count){
         if(currentNode.left != null){
             nodeCount(currentNode.left, count);
@@ -280,10 +195,6 @@ public class S_EmissionDistribution implements Externalizable {
         count.increment();
     }
 
-    /**
-     * Recursive function to remove empty nodes.
-     * @param currentNode current node in recursion
-     */
     private void removeEmptyNodes(Node currentNode){
         if(currentNode.left != null){
             if(currentNode.left.isEmpty()){
@@ -304,11 +215,6 @@ public class S_EmissionDistribution implements Externalizable {
         }
     }
 
-    /**
-     * Recursive method to sample seating arrangements of each node.  Also, if
-     * there are empty nodes they are pruned in this method call.
-     * @param currentNode current node in recursion
-     */
     private void sampleSeatingArrangements(Node currentNode){
         if(currentNode.left != null){
             if(currentNode.left.isEmpty()){
@@ -329,18 +235,13 @@ public class S_EmissionDistribution implements Externalizable {
         currentNode.sampleSeatingArrangements();
     }
 
-    /**
-     * Samples the hyper parameters.
-     * @param temp temperature of sampling
-     * @return joint score of the whole tree
-     */
     private double sampleHyperParameters(double temp){
         double[] c = new double[]{concentrations[0].value(), concentrations[1].value()};
         double[] d = new double[]{discounts[0].value(), discounts[1].value()};
         double stdDiscounts = .05, stdConcentrations = 3, r;
 
         double[] score = scoreByDepth();
-        
+
         // propose for discounts
         for (int i = 0; i < 2; i++) {
             discounts[i].plusEquals(stdDiscounts * rng.nextGaussian());
@@ -362,7 +263,7 @@ public class S_EmissionDistribution implements Externalizable {
                 discounts[i].set(d[i]);
             }
         }
-        
+
         // propose for concentrations
         for (int i = 0; i < 2; i++){
             concentrations[i].plusEquals(stdConcentrations * rng.nextGaussian());
@@ -394,27 +295,16 @@ public class S_EmissionDistribution implements Externalizable {
         return scalarScore;
     }
 
-    /**
-     * Scores the tree by depth.  Here, depth refers to the depths of each HPYP
-     * object on the tree.
-     * @return vector of scores for depths 0 and 1
-     */
     private double[] scoreByDepth(){
         double[] score= new double[2];
 
         scoreByDepth(baseNode, score);
         score[0] += concentrationPrior.logProportionalToDensity(concentrations[0].value());
         score[1] += concentrationPrior.logProportionalToDensity(concentrations[1].value());
-        
+
         return score;
     }
 
-    /**
-     * Recursive method to score the tree by depth, adding together all the by
-     * depth scores for each HPYP node.
-     * @param currentNode current node of recursion
-     * @param score container vector for score
-     */
     private void scoreByDepth(Node currentNode, double[] score){
         if(currentNode.left != null){
             if(currentNode.left.isEmpty()){
@@ -437,6 +327,7 @@ public class S_EmissionDistribution implements Externalizable {
         score[1] += hpypScore[1];
     }
 
+
     /***********************private classes************************************/
 
     private class Node extends IntHPYP {
@@ -445,11 +336,7 @@ public class S_EmissionDistribution implements Externalizable {
 
         /***********************constructor methods****************************/
         public Node(){
-            super(discounts, concentrations, baseDist, null);
-        }
-
-        public Node(int i){
-            super(discounts, concentrations, null);
+            super(discounts, concentrations, baseDist, concentrationPrior);
         }
 
         /***********************public methods*********************************/
@@ -476,94 +363,5 @@ public class S_EmissionDistribution implements Externalizable {
                 throw new IllegalArgumentException("key must be 0 or 1, not " + key);
             }
         }
-
-        private int[] keys(){
-            int[] keys;
-            if (left != null && right != null){
-                keys = new int[]{0,1};
-            } else if (left != null){
-                keys = new int[]{0};
-            } else if (right != null){
-                keys = new int[]{1};
-            } else {
-                keys = new int[0];
-            }
-
-            return keys;
-        }
-
-        private Node getSerialize(int key){
-            if(key == 0){
-                if(left == null){
-                    left = new Node(0);
-                }
-                return left;
-            } else if (key == 1){
-                if(right == null){
-                    right = new Node(0);
-                }
-                return right;
-            } else {
-                throw new IllegalArgumentException("key must be 0 or 1, not " + key);
-            }
-        }
-
-        public void serializeOut(ObjectOutput out) throws IOException{
-            writeExternalNoHyperParams(out);
-            int[] keys = keys();
-            out.writeInt(keys.length);
-            for(int key : keys){
-                out.writeInt(key);
-                get(key).serializeOut(out);
-            }
-        }
-
-        public void serializeIn(ObjectInput in) throws ClassNotFoundException, IOException{
-            readExternalNoHyperParams(in, concentrations, discounts, null);
-            
-            int size = in.readInt();
-            for(int i = 0; i < size; i++){
-                int key = in.readInt();
-                getSerialize(key).serializeIn(in);
-            }
-        }
     }
-
-    /*
-    public static void main(String[] args) throws IOException, ClassNotFoundException {
-        S_EmissionDistribution ed = new S_EmissionDistribution(0.1);
-
-        double low = 0.2, high = 0.8;
-        Pair<int[], Double> emission = ed.generate(0, low, high);
-        ed.seat(0, emission.first());
-
-        emission = ed.generate(0, low, high);
-        ed.seat(0, emission.first());
-
-        emission = ed.generate(0, low, high);
-        ed.seat(1, emission.first());
-
-        emission = ed.generate(0, low, high);
-        ed.seat(1, emission.first());
-
-        emission = ed.generate(0, low, high);
-        ed.seat(2, emission.first());
-
-        ed.sample(1, 1.0);
-
-        System.out.println(ed.score());
-        ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(new File("/Users/nicholasbartlett/Desktop/hpyp.out")));
-        oos.writeObject(ed);
-        oos.close();
-        
-        ObjectInputStream ois = new ObjectInputStream(new FileInputStream(new File("/Users/nicholasbartlett/Desktop/hpyp.out")));
-        S_EmissionDistribution e = (S_EmissionDistribution) ois.readObject();
-        System.out.println(e.score());
-
-        for(int i = 0; i < 10; i++){
-            System.out.println(ed.sample(1,1.0));
-            System.out.println(e.sample(1,1.0));
-        }        
-    }*/
 }
-
