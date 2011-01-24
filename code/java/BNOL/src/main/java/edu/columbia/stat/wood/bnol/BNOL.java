@@ -16,8 +16,11 @@ import edu.columbia.stat.wood.bnol.util.MutableDouble;
 import edu.columbia.stat.wood.bnol.util.MutableInt;
 import edu.columbia.stat.wood.bnol.util.Pair;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintStream;
 import java.io.Serializable;
@@ -25,14 +28,69 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map.Entry;
 
 /**
  *
  * @author nicholasbartlett
  */
 public class BNOL implements Serializable{
-    
-    public static void main(String[] args) throws IOException{
+
+    public static void main(String[] args) throws FileNotFoundException, IOException, ClassNotFoundException{
+        /*BNOL b = new BNOL(new int[0], new int[0], 5000, 10, .1, 0.2, 0.2, .5, .8);
+        b.generateFromScratch(1000,0);
+
+        System.out.println(b.score());
+        System.out.println(b.sample(1.0));
+        System.out.println(b.sample(1.0));
+        System.out.println(b.score());
+
+        ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(new File("/Users/nicholasbartlett/Desktop/bnol.ser")));
+        oos.writeObject(b);
+        oos.close();
+*/
+        ObjectInputStream ois = new ObjectInputStream(new FileInputStream(new File("/Users/nicholasbartlett/Desktop/bnol.ser")));
+
+        BNOL bb = (BNOL) ois.readObject();
+        for(int i = 0; i < 1000; i++){
+            double score = bb.sample(1.0);
+            System.out.println(score + ", " + bb.uniqueEmbeddings());
+        }
+        //System.out.println(bb.sample(1.0));
+    }
+
+    public static void main2(String[] args) throws IOException{
+        BNOL b = new BNOL(new int[0], new int[0], 5000, 10, .1, 0.2, 0.2, .5, .8);
+        b.generateFromScratch(10000,0);
+
+        System.out.println("In this test we use a fixed depth of 5 for all embeddings.  Still using \n"
+                + "a peaked emission distribution for words.  We generate 10k data poins and use \n"
+                + "a context length of 10.  We set the concentrations and discounts of the embedding \n"
+                + "distribution to be very low prior to sampling.  The first two elements are from a \n"
+                + "BNOL initialized at the truth, the second two are from a random init");
+
+        b.emissionDistributions.concentrations = new MutableDouble[]{new MutableDouble(0.01), new MutableDouble(0.01)};
+        b.emissionDistributions.discounts = new MutableDouble[]{new MutableDouble(0.01), new MutableDouble(0.01)};
+
+        BNOL bb = new BNOL(b.words, new int[0], 5000, 10, .1, 0.2, 0.2, 0.5, 0.8);
+        bb.initialize();
+
+        bb.emissionDistributions.concentrations = new MutableDouble[]{new MutableDouble(0.01), new MutableDouble(0.01)};
+        bb.emissionDistributions.discounts = new MutableDouble[]{new MutableDouble(0.01), new MutableDouble(0.01)};
+
+        System.out.println(b.score() + ", " + b.uniqueEmbeddings() + ", " + bb.score() + ", " + bb.uniqueEmbeddings());
+        for(int i = 0; i < 1000; i++){
+            System.out.println(b.sample(1.0) + ", " + b.uniqueEmbeddings() + ", " + bb.sample(1.0) + ", " + bb.uniqueEmbeddings());
+        }
+
+        System.out.println("\n initialized at truth \n \n");
+        b.printEmbeddings();
+
+        System.out.println("\n random initializations \n \n");
+        bb.printEmbeddings();
+    }
+
+    public static void main1(String[] args) throws IOException{
         BNOL b = new BNOL(new int[0], new int[0], 5000, 10, .1, 0.2, 0.2, .5, .8);
         b.generateFromScratch(10000,0);
 
@@ -214,11 +272,6 @@ public class BNOL implements Serializable{
 
     public static MersenneTwisterFast rng = new MersenneTwisterFast(1);
 
-    private double ll_emissions = 0.0;
-    private double ll_machines = 0.0;
-    private double ll_machine_transitions = 0.0;
-    private double ll_words = 0.0;
-
     /***********************constructor methods********************************/
 
     /**
@@ -232,7 +285,7 @@ public class BNOL implements Serializable{
      */
     public BNOL(int[] trainingWords, int[] testWords, int alphabetSize, int H, double b, double pForMachineStates, double pForMachineTransitions, double d0, double d1){
         machines = new HashMap();
-        emissionDistributions = new S_EmissionDistribution(b, d0, d1, 10, 1);
+        emissionDistributions = new S_EmissionDistribution(b, 5, d0, d1, 10, 1);
 
         machineKeys = new int[trainingWords.length];
         emissions = new int[trainingWords.length][];
@@ -324,37 +377,58 @@ public class BNOL implements Serializable{
         return embeddings.size();
     }
 
-    public double score(){
-        ll_machine_transitions = machineTransitions.score(true);
+    public HashMap<Context, MutableInt> getUniqueEmbedding(){
+        HashMap<Context, MutableInt> ue = new HashMap();
 
-        ll_machines = 0;
-        for(Machine m : machines.values()){
-            ll_machines += m.score(emissions, emissionDistributions, machineKeys);
+        MutableInt value;
+        for(int[] e : emissions){
+            value = ue.get(new Context(e));
+            if(value == null){
+                value = new MutableInt(0);
+                ue.put(new Context(e), value);
+            }
+            value.increment();
         }
 
-        ll_emissions = emissionDistributions.score();
+        return ue;
+    }
 
-        ll_words = wordDistribution.score(true);
+    public void printEmbeddings(){
+        HashMap<Context, MutableInt> ue = getUniqueEmbedding();
+        for (Entry<Context, MutableInt> e : ue.entrySet()){
+            e.getKey().print();
+            System.out.println(" --- > " + e.getValue().value());
+        }
+    }
 
-        return ll_emissions + ll_words + ll_machines + ll_machine_transitions;
+    public double score(){
+        double score = machineTransitions.score(true);
+
+        for(Machine m : machines.values()){
+            score += m.score(emissions, emissionDistributions, machineKeys);
+        }
+
+        score += emissionDistributions.score();
+
+        score += wordDistribution.score(true);
+
+        return score;
     }
 
     public double sample(double temp){
         sampleMachineKeys(temp);
 
-        ll_machine_transitions = machineTransitions.sample(temp);
+        machineTransitions.sample(temp);
 
-        ll_machines = sampleMachines(temp);
+        sampleMachines(temp);
 
-        ll_emissions = emissionDistributions.sampleSeatingArrangements(); //emissionDistributions.sample(10, temp);
+        emissionDistributions.sampleSeatingArrangements(); //emissionDistributions.sample(10, temp);
 
         sampleEmissions(temp);
 
-        ll_words = wordDistribution.sample(temp);
         wordDistribution.sampleSeatingArrangements();
-        ll_words = wordDistribution.score(true);
 
-        return ll_emissions + ll_words + ll_machines + ll_machine_transitions;
+        return score();
     }
     
     /**

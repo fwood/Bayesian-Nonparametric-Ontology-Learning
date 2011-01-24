@@ -13,13 +13,17 @@ import edu.columbia.stat.wood.bnol.util.MutableDouble;
 import edu.columbia.stat.wood.bnol.util.MutableInt;
 import edu.columbia.stat.wood.bnol.util.Pair;
 import gnu.trove.TIntArrayList;
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.Arrays;
 
 /**
  *
  * @author nicholasbartlett
  */
-public class S_EmissionDistribution_fixed {
+public class S_EmissionDistribution implements Externalizable {
 
     /*
     public static void main(String[] args) {
@@ -44,13 +48,13 @@ public class S_EmissionDistribution_fixed {
 
     private Node baseNode;
     private IntUniformDiscreteDistribution baseDist;
-    private MutableDouble[] discounts, concentrations;
+    public MutableDouble[] discounts, concentrations;
     private GammaDistribution concentrationPrior;
     private MersenneTwisterFast rng = new MersenneTwisterFast(5);
     private int length;
 
-    public S_EmissionDistribution_fixed(MutableDouble b, int length){
-        if(b.value() > 1.0 || b.value() < 0.0){
+    public S_EmissionDistribution(double b, int length){
+        if(b > 1.0 || b < 0.0){
             throw new IllegalArgumentException("b must be in 0 - 1");
         }
 
@@ -63,8 +67,8 @@ public class S_EmissionDistribution_fixed {
         this.length = length;
     }
 
-    public S_EmissionDistribution_fixed(MutableDouble b, int length, double d0, double d1, double c0, double c1){
-        if(b.value() > 1.0 || b.value() < 0.0){
+    public S_EmissionDistribution(double b, int length, double d0, double d1, double c0, double c1){
+        if(b > 1.0 || b < 0.0){
             throw new IllegalArgumentException("b must be in 0 - 1");
         }
 
@@ -75,6 +79,8 @@ public class S_EmissionDistribution_fixed {
         baseNode = new Node();
         this.length = length;
     }
+
+    public S_EmissionDistribution(){};
 
     public double logProbability(int machineState, int[] s){
         assert s.length == length;
@@ -179,6 +185,32 @@ public class S_EmissionDistribution_fixed {
         MutableInt nodeCount = new MutableInt(0);
         nodeCount(baseNode, nodeCount);
         return nodeCount.value();
+    }
+
+    public double sampleSeatingArrangements(){
+        sampleSeatingArrangements(baseNode);
+        return score();
+    }
+
+    public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeObject(baseDist);
+        out.writeInt(length);
+        out.writeObject(concentrations);
+        out.writeObject(discounts);
+        out.writeObject(concentrationPrior);
+        out.writeObject(rng);
+        baseNode.serializeOut(out);
+    }
+
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        baseDist = (IntUniformDiscreteDistribution) in.readObject();
+        length = in.readInt();
+        concentrations = (MutableDouble[]) in.readObject();
+        discounts = (MutableDouble[]) in.readObject();
+        concentrationPrior = (GammaDistribution) in.readObject();
+        rng = (MersenneTwisterFast) in.readObject();
+        baseNode = new Node(0);
+        baseNode.serializeIn(in);
     }
 
     /***********************private methods************************************/
@@ -336,7 +368,11 @@ public class S_EmissionDistribution_fixed {
 
         /***********************constructor methods****************************/
         public Node(){
-            super(discounts, concentrations, baseDist, concentrationPrior);
+            super(discounts, concentrations, baseDist, null);
+        }
+
+        public Node(int i){
+            super(discounts, concentrations, null);
         }
 
         /***********************public methods*********************************/
@@ -361,6 +397,57 @@ public class S_EmissionDistribution_fixed {
                 return right;
             } else {
                 throw new IllegalArgumentException("key must be 0 or 1, not " + key);
+            }
+        }
+
+        private int[] keys(){
+            int[] keys;
+            if (left != null && right != null){
+                keys = new int[]{0,1};
+            } else if (left != null){
+                keys = new int[]{0};
+            } else if (right != null){
+                keys = new int[]{1};
+            } else {
+                keys = new int[0];
+            }
+
+            return keys;
+        }
+
+        private Node getSerialize(int key){
+            if(key == 0){
+                if(left == null){
+                    left = new Node(0);
+                }
+                return left;
+            } else if (key == 1){
+                if(right == null){
+                    right = new Node(0);
+                }
+                return right;
+            } else {
+                throw new IllegalArgumentException("key must be 0 or 1, not " + key);
+            }
+        }
+
+        public void serializeOut(ObjectOutput out) throws IOException{
+            writeExternalNoHyperParams(out);
+            int[] keys = keys();
+            out.writeInt(keys.length);
+            for(int key : keys){
+                out.writeInt(key);
+                get(key).serializeOut(out);
+            }
+        }
+
+        public void serializeIn(ObjectInput in) throws ClassNotFoundException, IOException{
+            readExternalNoHyperParams(in, concentrations, discounts, null);
+
+            int size = in.readInt();
+            for(int i = 0; i < size; i++){
+                int key = in.readInt();
+                getSerialize(key).serializeIn(in);
             }
         }
     }

@@ -22,6 +22,14 @@ public class Context {
         return value;
     }
 
+    public void print(){
+        System.out.print(Arrays.toString(value));
+    }
+
+    public void println(){
+        System.out.println(Arrays.toString(value));
+    }
+
     @Override
     public int hashCode() {
         int hash = 7;

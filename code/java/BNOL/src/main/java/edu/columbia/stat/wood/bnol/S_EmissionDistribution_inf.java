@@ -23,7 +23,7 @@ import java.io.ObjectOutput;
  * @author nicholasbartlett
  */
 
-public class S_EmissionDistribution implements Externalizable {
+public class S_EmissionDistribution_inf implements Externalizable {
 
     private Node baseNode;
     private IntTreeDiscreteDistribution baseDist;
@@ -38,7 +38,7 @@ public class S_EmissionDistribution implements Externalizable {
      * be changed if these are not working well.
      * @param b initial b used as the base distribution on the emissions at each node
      */
-    public S_EmissionDistribution(double b){
+    public S_EmissionDistribution_inf(double b){
         if(b > 1.0 || b < 0.0){
             throw new IllegalArgumentException("b must be in 0 - 1");
         }
@@ -51,7 +51,7 @@ public class S_EmissionDistribution implements Externalizable {
         baseNode = new Node();
     }
 
-    public S_EmissionDistribution(double b, double d0, double d1, double c0, double c1){
+    public S_EmissionDistribution_inf(double b, double d0, double d1, double c0, double c1){
         if(b > 1.0 || b < 0.0){
             throw new IllegalArgumentException("b must be in 0 - 1");
         }
@@ -63,7 +63,7 @@ public class S_EmissionDistribution implements Externalizable {
         baseNode = new Node();
     }
 
-    public S_EmissionDistribution(){}
+    public S_EmissionDistribution_inf(){}
 
     /***********************public methods*************************************/
 
@@ -235,12 +235,6 @@ public class S_EmissionDistribution implements Externalizable {
         nodeCount(baseNode, nodeCount);
         return nodeCount.value();
     }
-
-    /*private Node baseNode;
-    private IntTreeDiscreteDistribution baseDist;
-    private MutableDouble[] discounts, concentrations;
-    private GammaDistribution concentrationPrior;
-    private MersenneTwisterFast rng = new MersenneTwisterFast(5);*/
 
     public void writeExternal(ObjectOutput out) throws IOException {
         out.writeObject(baseDist);
