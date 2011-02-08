@@ -14,7 +14,6 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.Arrays;
 
 /**
  *
@@ -23,8 +22,8 @@ import java.util.Arrays;
 public class HPYP {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException{
-        //File f = new File("/Users/nicholasbartlett/Documents/np_bayes/data/alice_in_wonderland/alice_in_wonderland.txt");
-        File f = new File("/home/bartlett/HPYP/alice_in_wonderland.txt");
+        File f = new File("/Users/nicholasbartlett/Documents/np_bayes/data/alice_in_wonderland/alice_in_wonderland.txt");
+        //File f = new File("/home/bartlett/HPYP/alice_in_wonderland.txt");
 
         int depth = 5;
         int[] context = new int[depth];
@@ -58,19 +57,18 @@ public class HPYP {
                 context[0] = next;
             }
 
-            for (int i = 0; i < 1000; i++) {
-                hpyp.sampleWeights();
-                System.out.println(hpyp.score());
+            for (int i = 0; i < 100; i++) {
+                System.out.println(hpyp.sample());
+                hpyp.printConcentrations();
+                hpyp.printDiscounts();
             }
             
-
         } finally {
             if(bis != null){
                 bis.close();
             }       
         }
     }
-
 
     private MersenneTwisterFast rng;
     private Restaurant ecr;
@@ -120,17 +118,45 @@ public class HPYP {
         return root.score() + ecr.scoreSubtree();
     }
 
+    public double sample() {
+        ecr.sampleSubtree(rng);
+        return sampleHyperParams();
+    }
+
     public void sampleWeights() {
         ecr.sampleSubtree(rng);
     }
 
-    public double[] scoreByDepth(){
+    public double[] scoreByDepth(boolean withHyperParams){
         double[] score = new double[discounts.length];
         score[0] += root.score();
         ecr.scoreByDepth(score, 0);
+
+        if(withHyperParams) {
+            for (int i = 0; i < discounts.length; i++) {
+                score[i] += RND.logGammaLikelihood(concentrations[i].value(), alpha, beta);
+            }
+        }
+        
         return score;
     }
-    
+
+    public void printDiscounts() {
+        System.out.format("Discounts = [%.2f",discounts[0].value());
+        for (int i = 1; i < discounts.length; i++) {
+            System.out.format(", %.2f",discounts[i].value());
+        }
+        System.out.println("]");
+    }
+
+    public void printConcentrations() {
+        System.out.format("Concentrations = [%.2f", concentrations[0].value());
+        for (int i = 1; i < concentrations.length; i++) {
+            System.out.format(", %.2f", concentrations[i].value());
+        }
+        System.out.println("]");
+    }
+
     private Restaurant get(int context) {
         Restaurant child = ecr.get(context);
         if (child == null) {
@@ -184,5 +210,68 @@ public class HPYP {
         } else {
             return concentrations[depth];
         }
+    }
+
+    private double sampleHyperParams(){
+        double stdDiscounts = .07, stdConcentrations = .7;
+        double[] currentScore = scoreByDepth(true);
+
+        // get the current values
+        double[] currentDiscounts = new double[discounts.length];
+        double[] currentConcentrations = new double[concentrations.length];
+        for (int i = 0; i < discounts.length; i++) {
+            currentDiscounts[i] = discounts[i].value();
+            currentConcentrations[i] = concentrations[i].value();
+        }
+
+        // make proposals for discounts
+        for (int i = 0; i < discounts.length; i++) {
+            discounts[i].plusEquals(stdDiscounts * rng.nextGaussian());
+            if (discounts[i].value() >= 1.0 || discounts[i].value() <= 0.0) {
+                discounts[i].set(currentDiscounts[i]);
+            }
+        }
+
+        // get score given proposals
+        double[] afterScore = scoreByDepth(true);
+
+        // choose to accept or reject each proposal
+        for (int i = 0; i < discounts.length; i++) {
+            double r = Math.exp(afterScore[i] - currentScore[i]);
+            r = r < 1.0 ? r : 1.0;
+
+            if (rng.nextBoolean(r)) {
+                currentScore[i] = afterScore[i];
+            } else {
+                discounts[i].set(currentDiscounts[i]);
+            }
+        }
+
+        //make proposals for concentrations
+        for (int i = 0; i < discounts.length; i++) {
+            concentrations[i].plusEquals(stdConcentrations * rng.nextGaussian());
+            if (concentrations[i].value() <= 0.0) {
+                concentrations[i].set(currentConcentrations[i]);
+            }
+        }
+
+        // get score given proposals
+        afterScore = scoreByDepth(true);
+
+        // choose to accept or reject each proposal
+        double score = 0.0;
+        for (int i = 0; i < discounts.length; i++) {
+            double r = Math.exp(afterScore[i] - currentScore[i]);
+            r = r < 1.0 ? r : 1.0;
+
+            if (rng.nextBoolean(r)) {
+                score += afterScore[i];
+            } else {
+                score += currentScore[i];
+                concentrations[i].set(currentConcentrations[i]);
+            }
+        }
+
+        return score + root.score();
     }
 }

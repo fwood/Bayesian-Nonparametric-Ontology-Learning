@@ -11,8 +11,12 @@ import edu.columbia.stat.wood.stickbreakinghpyp.util.MutableDouble;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.RND;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.SampleWithoutReplacement;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.TreeSet;
 
 /**
  *
@@ -212,6 +216,14 @@ public class Restaurant extends HashMap<Integer, Restaurant> {
         return string;
     }
 
+    public Iterator<IntDoublePair> sortedDistribution() {
+        return null;
+    }
+
+    public Iterator<IntDoublePair> partialSortedDistribution() {
+        return null;
+    }
+
     private int[][] sampleSeatingArrangements(double[] parentProbabilities, int counts[], int totalTables, int iterations, MersenneTwisterFast rng){
         int tables = totalTables;
         int customersToSample = 0;
@@ -368,37 +380,84 @@ public class Restaurant extends HashMap<Integer, Restaurant> {
         }
     }
 
-    public static void main(String[] args) {
-        MersenneTwisterFast rng = new MersenneTwisterFast(3);
-        RND.setRNG(rng);
+    public static class IntDoublePair {
+        public int i;
+        public double d;
 
-        Restaurant r = new Restaurant(new BaseRestaurant(new IntBinaryExpansionDistribution(.5)), new MutableDouble(1), new MutableDouble(.3));
-
-        r.adjustCount(1, 10);
-        r.adjustCount(2, 10);
-        r.adjustCount(3, 20);
-        r.adjustCount(4, 100);
-
-        for (int i = 0; i < 10; i++) {
-            r.sample(rng);
-            System.out.println(r.score() + r.parent.score());
+        public IntDoublePair(int i, double d) {
+            this.i = i;
+            this.d = d;
         }
 
-        System.out.println(r.parent + "\n");
-        System.out.println(r + "\n");
+        public IntDoublePair(){};
+    }
 
+    public static class IntDoublePairComparator implements Comparator<IntDoublePair> {
+        public int compare(IntDoublePair a, IntDoublePair b) {
+            if (a.d < b.d) {
+                return -1 ;
+            } else if (a.d > b.d) {
+                return 1;
+            } else {
+                return 0;
+            }
+        }
+    }
+    
+    private class SortedPartialDistributionIterator implements Iterator<IntDoublePair> {
+        
+        private HashSet<Integer> keys;
+        private Iterator<IntDoublePair> iter;
 
-        r.adjustCount(2,-10);
-        r.adjustCount(5, 10);
-        r.sample(rng);
-        System.out.println(r.parent + "\n");
-        System.out.println(r + "\n");
+        public SortedPartialDistributionIterator() {
+            TreeSet<IntDoublePair> spd = new TreeSet<IntDoublePair>(new IntDoublePairComparator());
+            keys = new HashSet<Integer>();
 
-        /*for(int i = 0; i < 100; i++) {
-            r.sample(rng);
-            System.out.println(r.score() + r.parent.score());
-            //System.out.println(r);
-        }*/
-       
+            for (Integer key : tableWeights.keySet()) {
+                spd.add(new IntDoublePair(key,probability(key)));
+                keys.add(key);
+            }
+
+            Restaurant p = parent;
+            while (p.parent != null) {
+                for (Integer key : p.tableWeights.keySet()) {
+                    if (!keys.contains(key)) {
+                        spd.add(new IntDoublePair(key,probability(key)));
+                        keys.add(key);
+                    }
+                }
+                p = p.parent;
+            }
+
+            iter = spd.descendingIterator();
+        }
+
+        public HashSet<Integer> keys() {
+            return keys;
+        }
+        
+        public double probBackOffToBase() {
+            double prob = probabilityOfBackOff;
+            Restaurant r = parent;
+
+            while (r.parent != null) {
+                prob *= r.probabilityOfBackOff;
+                r = r.parent;
+            }
+            
+            return prob;
+        }
+
+        public boolean hasNext() {
+            return iter.hasNext();
+        }
+
+        public IntDoublePair next() {
+            return iter.next();
+        }
+
+        public void remove() {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
     }
 }

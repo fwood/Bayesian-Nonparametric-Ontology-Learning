@@ -194,4 +194,13 @@ public class RND implements Serializable {
     private static double gamma(double x) {
         return Math.exp(logGamma(x));
     }
+
+    public static double logGammaLikelihood(double x, double alpha, double beta) {
+        double logLik = 0d;
+        logLik -= logGamma(alpha);
+        logLik -= alpha * Math.log(beta);
+        logLik += (alpha - 1d) * Math.log(x);
+        logLik -= x / beta;
+        return logLik;
+    }
 }
