@@ -29,10 +29,7 @@ public class IntBinaryExpansionDistribution extends IntDiscreteDistribution {
         if (type <= 0){
             prob = 0.0;
         } else {
-            String binaryString = Integer.toBinaryString(type);
-
-            prob = Math.pow((1d - b) / 2, binaryString.length() - 1);
-            prob *= b;
+            prob = Math.pow((1d - b) / 2, 31 - Integer.numberOfLeadingZeros(type)) * b;
         }
 
         return prob;
@@ -60,7 +57,26 @@ public class IntBinaryExpansionDistribution extends IntDiscreteDistribution {
     }
 
     @Override
-    public Iterator<Pair<Integer, Double>> iterator() {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public Iterator<IntDoublePair> iterator() {
+        return new Iter();
+    }
+
+    private class Iter implements Iterator<IntDoublePair> {
+        
+        private int next = 1;
+
+        public boolean hasNext() {
+            return next > 0;
+        }
+
+        public IntDoublePair next() {
+            IntDoublePair n = new IntDoublePair(next, Math.pow((1d - b) / 2d, 31 - Integer.numberOfLeadingZeros(next)) * b);
+            next++;
+            return n;
+        }
+
+        public void remove() {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
     }
 }

@@ -6,9 +6,11 @@
 package edu.columbia.stat.wood.stickbreakinghpyp;
 
 import edu.columbia.stat.wood.stickbreakinghpyp.util.IntDiscreteDistribution;
+import edu.columbia.stat.wood.stickbreakinghpyp.util.IntDoublePair;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.MutableInt;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map.Entry;
 
 /**
@@ -47,7 +49,7 @@ public class BaseRestaurant extends Restaurant {
     }
 
     @Override
-    public void sample(MersenneTwisterFast rng) {
+    public boolean sample(MersenneTwisterFast rng) {
         throw new RuntimeException("Yikes, this should never get called");
     }
 
@@ -69,5 +71,9 @@ public class BaseRestaurant extends Restaurant {
             string += "Type = " + entry.getKey() + ", Count = " + entry.getValue().value() + "\n";
         }
         return string;
+    }
+
+    public Iterator<IntDoublePair> iterator() {
+        return baseDistribution.iterator();
     }
 }

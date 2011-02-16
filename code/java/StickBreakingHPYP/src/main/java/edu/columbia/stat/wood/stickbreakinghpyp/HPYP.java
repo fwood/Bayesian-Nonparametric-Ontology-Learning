@@ -5,7 +5,9 @@
 
 package edu.columbia.stat.wood.stickbreakinghpyp;
 
+import edu.columbia.stat.wood.stickbreakinghpyp.Restaurant.SortedPartialDistributionIterator;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.IntDiscreteDistribution;
+import edu.columbia.stat.wood.stickbreakinghpyp.util.IntDoublePair;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.IntUniformDiscreteDistribution;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.MutableDouble;
@@ -14,6 +16,8 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Iterator;
 
 /**
  *
@@ -35,7 +39,7 @@ public class HPYP {
 
         for(int i = 0; i < disc.length; i++){
             disc[disc.length - 1 - i] = new MutableDouble(Math.pow(0.9, i + 1));
-            conc[i] = new MutableDouble(1.0);
+            conc[i] = new MutableDouble(0.01);
         }
 
         HPYP hpyp = new HPYP(disc, conc, new IntUniformDiscreteDistribution(256), 1,100);
@@ -57,12 +61,23 @@ public class HPYP {
                 context[0] = next;
             }
 
-            for (int i = 0; i < 100; i++) {
-                System.out.println(hpyp.sample());
-                hpyp.printConcentrations();
+            //hpyp.printConcentrations();
+            //hpyp.printDiscounts();
+
+            for (int i = 0; i < 1000; i++) {
+                System.out.print(hpyp.sample() + ", ");
                 hpyp.printDiscounts();
             }
-            
+
+            /*
+            Iterator<IntDoublePair> iter = hpyp.iterator(new int[]{101, 116, 116, 97, 104});
+            double s = 0d;
+            while(iter.hasNext()) {
+                IntDoublePair pr = iter.next();
+                System.out.println(pr.i + ", " + (char) pr.i + ", " + pr.d);
+                s += pr.d;
+            }
+            System.out.println(s);*/
         } finally {
             if(bis != null){
                 bis.close();
@@ -114,6 +129,10 @@ public class HPYP {
         get(context).adjustCount(type, multiplicity);
     }
 
+    public Iterator<IntDoublePair> iterator(int[] context) {
+        return new DistributionIterator((SortedPartialDistributionIterator) get(context).partialSortedDistribution(),root.iterator());
+    }
+
     public double score(){
         return root.score() + ecr.scoreSubtree();
     }
@@ -126,7 +145,7 @@ public class HPYP {
     public void sampleWeights() {
         ecr.sampleSubtree(rng);
     }
-
+    
     public double[] scoreByDepth(boolean withHyperParams){
         double[] score = new double[discounts.length];
         score[0] += root.score();
@@ -213,7 +232,7 @@ public class HPYP {
     }
 
     private double sampleHyperParams(){
-        double stdDiscounts = .07, stdConcentrations = .7;
+        double stdDiscounts = .07, stdConcentrations = 0d;
         double[] currentScore = scoreByDepth(true);
 
         // get the current values

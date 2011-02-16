@@ -38,6 +38,6 @@ public abstract class IntDiscreteDistribution implements Serializable {
      * in the iterator the result should be 1.0.
      * @return iterator
      */
-    abstract public Iterator<Pair<Integer, Double>> iterator();
+    abstract public Iterator<IntDoublePair> iterator();
 
 }

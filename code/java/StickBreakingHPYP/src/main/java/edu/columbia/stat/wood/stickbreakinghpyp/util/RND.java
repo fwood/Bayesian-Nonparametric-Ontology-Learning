@@ -174,7 +174,7 @@ public class RND implements Serializable {
 
                 sum += a;
                 logLik -= logGamma(a);
-                logLik += (a - 1) * Math.log(x[i]);
+                logLik += (a - 1d) * Math.log(x[i]);
             }
 
             logLik += logGamma(sum);

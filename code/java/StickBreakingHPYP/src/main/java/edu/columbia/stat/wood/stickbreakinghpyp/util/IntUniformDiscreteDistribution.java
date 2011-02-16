@@ -77,19 +77,19 @@ public class IntUniformDiscreteDistribution extends IntDiscreteDistribution{
      * the probability of the integer type in this discrete distribution.
      * @return iterator
      */
-    public Iterator<Pair<Integer, Double>> iterator() {
+    public Iterator<IntDoublePair> iterator() {
         return new UniformIterator();
     }
 
-    private class UniformIterator implements Iterator<Pair<Integer, Double>> {
+    private class UniformIterator implements Iterator<IntDoublePair> {
         int type = leftType;
         
         public boolean hasNext() {
             return type <= rightType;
         }
 
-        public Pair<Integer, Double> next() {
-            return new Pair(type++, p);
+        public IntDoublePair next() {
+            return new IntDoublePair(type++, p);
         }
 
         public void remove() {

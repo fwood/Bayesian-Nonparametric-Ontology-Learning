@@ -5,9 +5,10 @@
 package edu.columbia.stat.wood.stickbreakinghpyp;
 
 import edu.columbia.stat.wood.stickbreakinghpyp.util.DoubleArrayList;
-import edu.columbia.stat.wood.stickbreakinghpyp.util.IntBinaryExpansionDistribution;
+import edu.columbia.stat.wood.stickbreakinghpyp.util.IntDoublePair;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.MutableDouble;
+import edu.columbia.stat.wood.stickbreakinghpyp.util.MutableInt;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.RND;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.SampleWithoutReplacement;
 import java.util.Arrays;
@@ -27,7 +28,7 @@ public class Restaurant extends HashMap<Integer, Restaurant> {
     private Restaurant parent;
     private double probabilityOfBackOff;
     private HashMap<Integer, TypeWeights> tableWeights;
-    private MutableDouble concentration, discount;
+    public MutableDouble concentration, discount;
 
     /***************constructor methods****************************************/
     public Restaurant(Restaurant parent, MutableDouble concentration, MutableDouble discount) {
@@ -80,13 +81,13 @@ public class Restaurant extends HashMap<Integer, Restaurant> {
      * Gibbs samples the restaurant.
      * @param rng random number generator
      */
-    public void sample(MersenneTwisterFast rng) {
+    public boolean sample(MersenneTwisterFast rng) {
         int[] types = new int[tableWeights.size()];
         int[] innovationCounts = new int[types.length];
         double[] parentProbabilities = new double[types.length];
 
         // go through map and sample assignments of each piece
-        int key, index = 0, tables = 0;
+        int key, index = 0, tables = 0, count = 0;
         TypeWeights value;
         double parentProb;
         for (Entry<Integer, TypeWeights> entry : tableWeights.entrySet()) {
@@ -94,6 +95,7 @@ public class Restaurant extends HashMap<Integer, Restaurant> {
             value = entry.getValue();
 
             types[index] = key;
+            count += value.count;
             
             if (value.count == 0) {
                 value.assignments = new int[0];
@@ -109,44 +111,49 @@ public class Restaurant extends HashMap<Integer, Restaurant> {
             index++;
         }
 
-        // get a seating arrangment for the innovation seatings
-        int[][] innovationSeatings = sampleSeatingArrangements(parentProbabilities, innovationCounts, tables, 10, rng);
+        if (count == 0) {
+            return true;
+        } else {
+            // get a seating arrangment for the innovation seatings
+            int[][] innovationSeatings = sampleSeatingArrangements(parentProbabilities, innovationCounts, tables, 10, rng);
 
-        // get the dirichlet parameters to divide up the weight between the types
-        // and remove types with 0 counts
-        double[] dirichletParameters = new double[types.length + 1];
-        tables = 0;
+            // get the dirichlet parameters to divide up the weight between the types
+            // and remove types with 0 counts
+            double[] dirichletParameters = new double[types.length + 1];
+            tables = 0;
 
-        for (int i = 0; i < types.length; i++) {
-            value = tableWeights.get(types[i]);
+            for (int i = 0; i < types.length; i++) {
+                value = tableWeights.get(types[i]);
 
-            if (value.count == 0) {
-                tableWeights.remove(types[i]);
-                parent.adjustCount(types[i], -1 * value.weights.length);
-                dirichletParameters[i] = -1d;
-            } else {
-                if (innovationSeatings[i].length > 0) {
-                    int[] old_assignments = value.assignments;
-                    value.assignments = new int[old_assignments.length + innovationSeatings[i].length];
-                    System.arraycopy(old_assignments, 0, value.assignments, 0, old_assignments.length);
-                    System.arraycopy(innovationSeatings[i], 0, value.assignments, old_assignments.length, innovationSeatings[i].length);
+                if (value.count == 0) {
+                    tableWeights.remove(types[i]);
+                    parent.adjustCount(types[i], -1 * value.weights.length);
+                    dirichletParameters[i] = -1d;
+                } else {
+                    if (innovationSeatings[i].length > 0) {
+                        int[] old_assignments = value.assignments;
+                        value.assignments = new int[old_assignments.length + innovationSeatings[i].length];
+                        System.arraycopy(old_assignments, 0, value.assignments, 0, old_assignments.length);
+                        System.arraycopy(innovationSeatings[i], 0, value.assignments, old_assignments.length, innovationSeatings[i].length);
+                    }
+
+                    parent.adjustCount(types[i], value.assignments.length - value.weights.length);
+                    tables += value.assignments.length;
+                    dirichletParameters[i] = value.count - discount.value() * (double) value.assignments.length;
                 }
-
-                parent.adjustCount(types[i], value.assignments.length - value.weights.length);
-                tables += value.assignments.length;
-                dirichletParameters[i] = value.count - discount.value() * (double) value.assignments.length;
-            } 
-        }
-
-        dirichletParameters[dirichletParameters.length - 1] = discount.value() * (double) tables + concentration.value();
-        double[] dirichletSample = RND.sampleDirichlet(dirichletParameters);
-
-        probabilityOfBackOff = dirichletSample[dirichletSample.length - 1];
-        for (int i = 0; i < types.length; i++) {
-            if (dirichletSample[i] != Double.NEGATIVE_INFINITY) {
-                assert dirichletSample[i] > 0d;
-                tableWeights.get(types[i]).sampleWeights(dirichletSample[i], discount.value());
             }
+
+            dirichletParameters[dirichletParameters.length - 1] = discount.value() * (double) (tables + 1) + concentration.value();
+            double[] dirichletSample = RND.sampleDirichlet(dirichletParameters);
+
+            probabilityOfBackOff = dirichletSample[dirichletSample.length - 1];
+            for (int i = 0; i < types.length; i++) {
+                if (dirichletSample[i] != Double.NEGATIVE_INFINITY) {
+                    assert dirichletSample[i] > 0d;
+                    tableWeights.get(types[i]).sampleWeights(dirichletSample[i], discount.value());
+                }
+            }
+            return false;
         }
     }
 
@@ -168,7 +175,7 @@ public class Restaurant extends HashMap<Integer, Restaurant> {
             tables += value.weights.length;
         }
 
-        params.add(disc * (double) tables + conc);
+        params.add(disc * (double) (tables + 1) + conc);
         draw.add(probabilityOfBackOff);
         
         return RND.logDirichletLikelihood(draw.toArray(), params.toArray());
@@ -194,11 +201,51 @@ public class Restaurant extends HashMap<Integer, Restaurant> {
         return score;
     }
 
-    public void sampleSubtree(MersenneTwisterFast rng) {
-        for (Restaurant child : values()) {
-            child.sampleSubtree(rng);
+    public boolean sampleSubtree(MersenneTwisterFast rng) {
+        HashSet<Integer> removeKeys = new HashSet<Integer>();
+
+        for (Entry<Integer,Restaurant> entry : entrySet()) {
+            Integer key = entry.getKey();
+            Restaurant child = entry.getValue();
+            if (child.sampleSubtree(rng)) {
+                removeKeys.add(key);
+            }
         }
-        sample(rng);
+
+        for (Integer key : removeKeys) {
+            remove(key);
+        }
+        
+        return sample(rng);
+    }
+
+    public boolean checkCounts() {
+        if (isEmpty()) {
+            return true;
+        } else {
+            HashMap<Integer, MutableInt> map = new HashMap<Integer, MutableInt>();
+            for (Entry<Integer, TypeWeights> entry : tableWeights.entrySet()) {
+                map.put(entry.getKey(), new MutableInt(entry.getValue().count));
+            }
+
+            boolean check = true;
+
+            for (Restaurant child : values()) {
+
+                for (Entry<Integer, TypeWeights> entry : child.tableWeights.entrySet()) {
+                    map.get(entry.getKey()).plusEquals(-1 * entry.getValue().weights.length);
+                }
+                
+                check = child.checkCounts();
+            }
+
+            for (MutableInt mi : map.values()) {
+                if (mi.value() != 0) {
+                    check = false;
+                }
+            }
+            return check;
+        }
     }
 
     @Override
@@ -216,12 +263,8 @@ public class Restaurant extends HashMap<Integer, Restaurant> {
         return string;
     }
 
-    public Iterator<IntDoublePair> sortedDistribution() {
-        return null;
-    }
-
     public Iterator<IntDoublePair> partialSortedDistribution() {
-        return null;
+        return new SortedPartialDistributionIterator();
     }
 
     private int[][] sampleSeatingArrangements(double[] parentProbabilities, int counts[], int totalTables, int iterations, MersenneTwisterFast rng){
@@ -380,18 +423,6 @@ public class Restaurant extends HashMap<Integer, Restaurant> {
         }
     }
 
-    public static class IntDoublePair {
-        public int i;
-        public double d;
-
-        public IntDoublePair(int i, double d) {
-            this.i = i;
-            this.d = d;
-        }
-
-        public IntDoublePair(){};
-    }
-
     public static class IntDoublePairComparator implements Comparator<IntDoublePair> {
         public int compare(IntDoublePair a, IntDoublePair b) {
             if (a.d < b.d) {
@@ -404,7 +435,7 @@ public class Restaurant extends HashMap<Integer, Restaurant> {
         }
     }
     
-    private class SortedPartialDistributionIterator implements Iterator<IntDoublePair> {
+    public class SortedPartialDistributionIterator implements Iterator<IntDoublePair> {
         
         private HashSet<Integer> keys;
         private Iterator<IntDoublePair> iter;
