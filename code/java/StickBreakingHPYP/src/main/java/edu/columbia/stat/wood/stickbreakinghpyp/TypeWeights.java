@@ -95,4 +95,18 @@ public class TypeWeights implements Serializable{
             weights[i] *= totalWeight;
         }
     }
+
+    public double score(double discount) {
+        double score = 0.0;
+
+        for (int table : assignments) {
+            if (table > 0) {
+                for (int customer = 1; customer < table; customer++) {
+                    score += Math.log((double) customer - discount);
+                }
+            }
+        }
+
+        return score;
+    }
 }

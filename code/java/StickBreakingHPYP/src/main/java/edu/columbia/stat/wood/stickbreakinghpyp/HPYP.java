@@ -16,7 +16,6 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Iterator;
 
 /**
@@ -65,8 +64,9 @@ public class HPYP {
             //hpyp.printDiscounts();
 
             for (int i = 0; i < 1000; i++) {
-                System.out.print(hpyp.sample() + ", ");
-                hpyp.printDiscounts();
+                hpyp.sampleWeights();
+                System.out.println(hpyp.score());
+                //hpyp.printDiscounts();
             }
 
             /*
@@ -129,7 +129,19 @@ public class HPYP {
         get(context).adjustCount(type, multiplicity);
     }
 
+    public double probability(int[] context, int type) {
+        return get(context).probability(type);
+    }
+
+    public double probability(int context, int type) {
+        return get(context).probability(type);
+    }
+
     public Iterator<IntDoublePair> iterator(int[] context) {
+        return new DistributionIterator((SortedPartialDistributionIterator) get(context).partialSortedDistribution(),root.iterator());
+    }
+
+    public Iterator<IntDoublePair> iterator(int context) {
         return new DistributionIterator((SortedPartialDistributionIterator) get(context).partialSortedDistribution(),root.iterator());
     }
 

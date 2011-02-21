@@ -157,28 +157,51 @@ public class Restaurant extends HashMap<Integer, Restaurant> {
         }
     }
 
+     /*public double score(){
+        double score = 0.0, d = discount.value(), c = concentration.value();
+
+        TIntObjectIterator<TSA> iterator = tableArrangements.iterator();
+        while(iterator.hasNext()){
+            iterator.advance();
+            score += iterator.value().score(d);
+        }
+
+        for(int table = 1; table < tables; table++){
+            score += Math.log((double) table * d + c);
+        }
+
+        for(int customer = 1; customer < customers; customer++){
+            score -= Math.log((double) customer + c);
+        }
+
+        return score;
+    }*/
+
     public double score(){
         double disc = discount.value();
         double conc = concentration.value();
-
-        DoubleArrayList params = new DoubleArrayList();
-        DoubleArrayList draw = new DoubleArrayList();
+        double score = 0d;
 
         int tables = 0;
-       
+        int customers = 0;
+        int[] assignments;
+        
         for (TypeWeights value : tableWeights.values()) {
-            for (int i = 0; i < value.assignments.length; i++) {
-                params.add((double) value.assignments[i] - disc);
-                draw.add(value.weights[i]);
-            }
-            
-            tables += value.weights.length;
+            score += value.score(disc);
+
+            customers += value.count;
+            tables += value.assignments.length;
         }
 
-        params.add(disc * (double) (tables + 1) + conc);
-        draw.add(probabilityOfBackOff);
-        
-        return RND.logDirichletLikelihood(draw.toArray(), params.toArray());
+        for(int table = 1; table < tables; table++){
+            score += Math.log((double) table * disc + conc);
+        }
+
+        for(int customer = 1; customer < customers; customer++){
+            score -= Math.log((double) customer + conc);
+        }
+
+        return score;
     }
 
     public void scoreByDepth(double[] score, int currentDepth) {
