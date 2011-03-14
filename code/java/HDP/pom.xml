@@ -9,8 +9,9 @@
     <packaging>jar</packaging>
 
     <name>Stick Breaking HDP</name>
-    <description></description>
+    <description>HDP implemented using the stick breaking representation</description>
 
+	<!--
     <repositories>
         <repository>
             <id>maven2-repository.dev.java.net</id>
@@ -19,19 +20,14 @@
             <layout>default</layout>
         </repository>
     </repositories>
-
-    <dependencies>
-    </dependencies>
-
+    -->
+    
     <build>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
                 <configuration>
                     <source>1.6</source>
                     <target>1.6</target>

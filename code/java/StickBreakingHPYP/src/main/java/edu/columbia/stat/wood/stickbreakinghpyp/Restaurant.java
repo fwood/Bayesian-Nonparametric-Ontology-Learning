@@ -4,9 +4,7 @@
  */
 package edu.columbia.stat.wood.stickbreakinghpyp;
 
-import edu.columbia.stat.wood.stickbreakinghpyp.util.DoubleArrayList;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.IntDoublePair;
-import edu.columbia.stat.wood.stickbreakinghpyp.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.MutableDouble;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.MutableInt;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.RND;
@@ -17,6 +15,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.TreeSet;
 
 /**
@@ -81,7 +80,7 @@ public class Restaurant extends HashMap<Integer, Restaurant> {
      * Gibbs samples the restaurant.
      * @param rng random number generator
      */
-    public boolean sample(MersenneTwisterFast rng) {
+    public boolean sample(Random rng) {
         int[] types = new int[tableWeights.size()];
         int[] innovationCounts = new int[types.length];
         double[] parentProbabilities = new double[types.length];
@@ -224,7 +223,7 @@ public class Restaurant extends HashMap<Integer, Restaurant> {
         return score;
     }
 
-    public boolean sampleSubtree(MersenneTwisterFast rng) {
+    public boolean sampleSubtree(Random rng) {
         HashSet<Integer> removeKeys = new HashSet<Integer>();
 
         for (Entry<Integer,Restaurant> entry : entrySet()) {
@@ -290,7 +289,7 @@ public class Restaurant extends HashMap<Integer, Restaurant> {
         return new SortedPartialDistributionIterator();
     }
 
-    private int[][] sampleSeatingArrangements(double[] parentProbabilities, int counts[], int totalTables, int iterations, MersenneTwisterFast rng){
+    private int[][] sampleSeatingArrangements(double[] parentProbabilities, int counts[], int totalTables, int iterations, Random rng){
         int tables = totalTables;
         int customersToSample = 0;
         TSA[] seatings = new TSA[counts.length];
@@ -342,7 +341,7 @@ public class Restaurant extends HashMap<Integer, Restaurant> {
         return seatingArrangements;
     }
 
-    private static int[] getRandomIndexOrder(int[] counts, int customersToSample, MersenneTwisterFast rng) {
+    private static int[] getRandomIndexOrder(int[] counts, int customersToSample, Random rng) {
         int[] randomIndexOrder = new int[customersToSample];
         int[] randomOrder = SampleWithoutReplacement.sampleWithoutReplacement(customersToSample, rng);
 
@@ -367,7 +366,7 @@ public class Restaurant extends HashMap<Integer, Restaurant> {
         private double disc = discount.value();
         private double conc = concentration.value();
 
-        public boolean seat(double parentProb, int tables, MersenneTwisterFast rng){
+        public boolean seat(double parentProb, int tables, Random rng){
             if (sa == null) {
                 sa = new int[]{1};
                 c++;
@@ -406,7 +405,7 @@ public class Restaurant extends HashMap<Integer, Restaurant> {
             return true;
         }
 
-        public boolean unseat(MersenneTwisterFast rng){
+        public boolean unseat(Random rng){
             double totalWeight = c;
             double randomNumber = rng.nextDouble();
             double cuSum = 0d;
@@ -447,10 +446,11 @@ public class Restaurant extends HashMap<Integer, Restaurant> {
     }
 
     public static class IntDoublePairComparator implements Comparator<IntDoublePair> {
+        @Override
         public int compare(IntDoublePair a, IntDoublePair b) {
-            if (a.d < b.d) {
+            if (a.doubleValue() < b.doubleValue()) {
                 return -1 ;
-            } else if (a.d > b.d) {
+            } else if (a.doubleValue() > b.doubleValue()) {
                 return 1;
             } else {
                 return 0;

@@ -5,9 +5,9 @@
 
 package edu.columbia.stat.wood.stickbreakinghpyp;
 
-import edu.columbia.stat.wood.stickbreakinghpyp.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.RND;
 import java.io.Serializable;
+import java.util.Random;
 
 /**
  *
@@ -39,7 +39,7 @@ public class TypeWeights implements Serializable{
         return totalWeight;
     }
 
-    public int sampleAssignments(double parentProbability, double probabilityOfBackOff, MersenneTwisterFast rng){
+    public int sampleAssignments(double parentProbability, double probabilityOfBackOff, Random rng){
         assignments = new int[weights.length];
 
         double randomNumber, cuSum, totalProb = totalWeight() + parentProbability * probabilityOfBackOff;

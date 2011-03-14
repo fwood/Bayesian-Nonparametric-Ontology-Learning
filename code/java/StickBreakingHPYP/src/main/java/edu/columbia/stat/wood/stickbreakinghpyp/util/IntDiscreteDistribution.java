@@ -7,6 +7,7 @@ package edu.columbia.stat.wood.stickbreakinghpyp.util;
 
 import java.io.Serializable;
 import java.util.Iterator;
+import java.util.Random;
 
 /**
  * Int discrete distribution interface.
@@ -28,7 +29,7 @@ public abstract class IntDiscreteDistribution implements Serializable {
      * @param rng random number generator
      * @return generated int sample
      */
-    abstract public int generate(MersenneTwisterFast rng);
+    abstract public int generate(Random rng);
 
     /**
      * Gets an iterator over Integer Double pairs such that the Double value is the

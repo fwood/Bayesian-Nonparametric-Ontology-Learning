@@ -9,8 +9,9 @@
     <packaging>jar</packaging>
 
     <name>IHMM</name>
-    <description></description>
+    <description>Infinite HMM for sequence data</description>
 
+	<!--
     <repositories>
         <repository>
             <id>maven2-repository.dev.java.net</id>
@@ -19,11 +20,18 @@
             <layout>default</layout>
         </repository>
     </repositories>
+    -->
 
     <dependencies>
          <dependency>
             <groupId>edu.columbia.stat.wood</groupId>
             <artifactId>stickbreakinghpyp</artifactId>
+            <version>1.0</version>
+            <type>jar</type>
+         </dependency>
+         <dependency>
+            <groupId>edu.columbia.stat.wood</groupId>
+            <artifactId>hdp</artifactId>
             <version>1.0</version>
             <type>jar</type>
          </dependency>
@@ -33,11 +41,8 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
                 <configuration>
                     <source>1.6</source>
                     <target>1.6</target>

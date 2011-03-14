@@ -58,7 +58,7 @@ public class DirichletProcessDistribution extends DiscreteDistribution {
         nmw.n_o += adjustment;
         
         if (nmw.n() == 0) {
-            baseDistribution.adjustObservedCount(type, nmw.m);
+            baseDistribution.adjustPseudoCount(type, -nmw.m);
             counts.remove(type);
         } else if (nmw.n() < 0) {
             throw new RuntimeException("Cannot remove so many counts of type " + type);
@@ -80,7 +80,7 @@ public class DirichletProcessDistribution extends DiscreteDistribution {
         nmw.n_p += adjustment;
 
         if (nmw.n() == 0) {
-            baseDistribution.adjustObservedCount(type, nmw.m);
+            baseDistribution.adjustPseudoCount(type, -nmw.m);
             counts.remove(type);
         } else if (nmw.n() < 0) {
             throw new RuntimeException("Cannot remove so many counts of type " + type);

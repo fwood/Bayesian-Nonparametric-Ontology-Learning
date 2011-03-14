@@ -10,7 +10,8 @@
 
     <name>Stick Breaking HPYP</name>
     <description></description>
-
+	
+	<!--
     <repositories>
         <repository>
             <id>maven2-repository.dev.java.net</id>
@@ -19,12 +20,13 @@
             <layout>default</layout>
         </repository>
     </repositories>
+	-->
 
     <dependencies>
          <dependency>
             <groupId>org.apache.commons</groupId>
-            <artifactId>math</artifactId>
-            <version>2.1</version>
+            <artifactId>commons-math</artifactId>
+            <version>2.2</version>
             <type>jar</type>
          </dependency>
     </dependencies>
@@ -33,11 +35,8 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
                 <configuration>
                     <source>1.6</source>
                     <target>1.6</target>
@@ -62,6 +61,6 @@
             </plugin>
         </plugins>
     </build>
-
+    
 </project>
 

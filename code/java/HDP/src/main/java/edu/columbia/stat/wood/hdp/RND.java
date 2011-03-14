@@ -167,16 +167,27 @@ public class RND implements Serializable {
             throw new IllegalArgumentException("Args must have same length");
         } else {
             double logLik = 0d;
-            double sum = 0d, a, l = x.length;
+            double sum = 0d, a, l = x.length, xval;
 
             for (int i = 0; i < l; i++){
                 a = alpha[i];
+                xval = x[i];
 
-                assert a > 0 : "a was instead" + a;
+                if (a < -0.0001) {
+                    throw new IllegalArgumentException("Params must be non negative");
+                } else if (a <= 0.0001) {
+                    a = 0.0001;
+                }
+
+                if (xval <= -0.0001) {
+                    throw new IllegalArgumentException("Data must be non negative");
+                } else if (xval <= 0.001) {
+                    xval = 0.0001;
+                }
 
                 sum += a;
                 logLik -= logGamma(a);
-                logLik += (a - 1d) * Math.log(x[i]);
+                logLik += (a - 1d) * Math.log(xval);
             }
 
             logLik += logGamma(sum);
@@ -215,25 +226,28 @@ public class RND implements Serializable {
      * @return number of tables
      */
     public static int sampleDirichletProcessTables(int n, double alpha, double beta) {
+        if (beta <= 0d) {
+            return 1;
+        } else {
+            double c0 = logGamma(alpha * beta) - logGamma(alpha * beta + (double) n);
+            double c1 = Math.log(alpha) + Math.log(beta);
 
-        double c0 = logGamma(alpha * beta) - logGamma(alpha * beta + (double) n);
-        double c1 = Math.log(alpha) + Math.log(beta);
+            double cuSum = 0;
+            double r = rng.nextDouble();
 
-        double cuSum = 0;
-        double r = rng.nextDouble();
-
-        int m = 0;
-        for (int i = 1; i <= n; i++) {
-            cuSum += Math.exp(c0 + lsn.get(n, i) + i * c1);
-            if (cuSum > r) {
-                m = i;
-                break;
+            int m = 0;
+            for (int i = 1; i <= n; i++) {
+                cuSum += Math.exp(c0 + lsn.get(n, i) + i * c1);
+                if (cuSum > r) {
+                    m = i;
+                    break;
+                }
             }
+
+            assert m > 0 : "alpha = " + alpha + " beta = " + beta;
+
+            return m;
         }
-
-        assert m > 0;
-
-        return m;
     }
 
     /**

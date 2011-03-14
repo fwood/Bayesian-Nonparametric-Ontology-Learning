@@ -5,13 +5,14 @@
 package edu.columbia.stat.wood.stickbreakinghpyp.util;
 
 import java.io.Serializable;
+import java.util.Random;
 
 /**
  * @author nicholasbartlett
  */
 public class RND implements Serializable {
 
-    private static MersenneTwisterFast rng;
+    private static Random rng;
 
     /***************static methods*********************************************/
 
@@ -19,7 +20,7 @@ public class RND implements Serializable {
      * Sets the random number generator underlying the methods of this class.
      * @param rng random number generator
      */
-    public static final void setRNG(MersenneTwisterFast rng) {
+    public static final void setRNG(Random rng) {
         RND.rng = rng;
     }
 

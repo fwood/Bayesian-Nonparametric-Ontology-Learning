@@ -4,21 +4,19 @@
  */
 package edu.columbia.stat.wood.ihmm;
 
-import edu.columbia.stat.wood.stickbreakinghpyp.HPYP;
-import edu.columbia.stat.wood.stickbreakinghpyp.util.BinaryContext;
-import edu.columbia.stat.wood.stickbreakinghpyp.util.IntBinaryExpansionDistribution;
-import edu.columbia.stat.wood.stickbreakinghpyp.util.IntDiscreteDistribution;
-import edu.columbia.stat.wood.stickbreakinghpyp.util.IntDoublePair;
-import edu.columbia.stat.wood.stickbreakinghpyp.util.IntUniformDiscreteDistribution;
-import edu.columbia.stat.wood.stickbreakinghpyp.util.MersenneTwisterFast;
+import edu.columbia.stat.wood.hdp.DiscreteDistribution;
+import edu.columbia.stat.wood.hdp.DiscreteDistribution.IntDoublePair;
+import edu.columbia.stat.wood.hdp.HierarchicalDirichletProcess;
+import edu.columbia.stat.wood.hdp.RND;
+import edu.columbia.stat.wood.hdp.UniformDistribution;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.MutableDouble;
-import edu.columbia.stat.wood.stickbreakinghpyp.util.RND;
+import edu.columbia.stat.wood.stickbreakinghpyp.util.Pair;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.Random;
 
 /**
  *
@@ -26,30 +24,46 @@ import java.util.Map.Entry;
  */
 public class IHMM {
 
+    
     public static void main(String[] args) {
+        int n = 10000;
+        System.out.println("n = " + n);
+
         long seed = new java.util.Random().nextLong();
         System.out.println("seed = " + seed);
 
         IHMM hmm = new IHMM();
-        RND.setRNG(hmm.rng = new MersenneTwisterFast(seed));
+        hmm.rng = new Random();
+        Pair<int[],int[]> data = (new Generate4StateSynthetic()).generate(n, hmm.rng);
 
-        hmm.artificialGenerate(8000);
-        int[] truth = hmm.s;
+        hmm.s = data.first();
+        hmm.y = data.second();
+        hmm.initStates();
+
+        //System.out.println("obs = " + Arrays.toString(hmm.y));
+        //System.out.println();
+        
+        //System.out.println("states = " + Arrays.toString(hmm.s));
+        
+        hmm.initTransitionMatrix(new UniformDistribution(20,1));
+        hmm.initLikelihood();
+
+        //System.out.println();
+        //((MultinomialLikelihood) hmm.likelihood).print(20);
+        System.out.println();
+        //hmm.transitionMatrix.print();
+
+        System.out.println();
+        for (int i = 0; i++ < 1000;) {
+            hmm.sample();
+            System.out.println(hmm.score());// + ", " + ((MultinomialLikelihood) hmm.likelihood).count());
+        }
+        
+        ((MultinomialLikelihood) hmm.likelihood).print(20);
 
         System.out.println(Arrays.toString(hmm.s));
-        //System.out.println(Arrays.toString(hmm.y));
 
-        hmm.initStates();
-        hmm.initTransitionMatrix(new IntBinaryExpansionDistribution(0.4));
-        hmm.initLikelihood(4);
-
-        //System.out.println(Arrays.toString(hmm.s));
-
-        for (int i = 0; i++ < 250;) {
-            hmm.sample();
-            System.out.println(hmm.score());// + ", " + Arrays.toString(hmm.s));
-        }
-
+        /*
         HashSet<Integer> states = new HashSet<Integer>();
         for (int state : hmm.s) {
             states.add(state);
@@ -61,140 +75,64 @@ public class IHMM {
                 System.out.print(", " + hmm.likelihood(state,i));
             }
             System.out.println("]");
-        }
+        }*/
     }
-
-    public void artificialGenerate(int n) {
-        int vocabSize = 4;
-
-        s = new int[n];
-        y = new int[n];
-
-        double[] state_00 = new double[]{1d, 0d, 0d, 0d};
-        double[] state_01 = new double[]{0d, 1d, 0d, 0d};
-
-        double[] state_0 = new double[]{0.5, 0.5, 0d, 0d};
-
-        double[] state_10 = new double[]{0d, 0d, 1d, 0d};
-        double[] state_11 = new double[]{0d, 0d, 0d, 1d};
-
-        double[] state_1 = new double[]{0d, 0d, 0.5, 0.5};
-        
-        double[] state_ = new double[]{0.25, 0.25, 0.25, 0.25};
-
-        s[0] = 1;
-        for (int i = 1; i < n; i++) {
-            if (rng.nextDouble() <= 0.05) {
-                s[i] = s[i - 1];
-            } else {
-                s[i] = (s[i - 1] + 1) % 8;
-                if (s[i] == 0) {
-                    s[i]++;
-                }
-            }
-        }
-
-        double[] pmf;
-        double cuSum, randomNumber;
-        top_for:
-        for (int i = 0; i < n; i++) {
-            pmf = null;
-            switch (s[i]) {
-                case 1:
-                    pmf = state_;
-                    break;
-                case 2:
-                    pmf = state_0;
-                    break;
-                case 3:
-                    pmf = state_1;
-                    break;
-                case 4:
-                    pmf = state_00;
-                    break;
-                case 5:
-                    pmf = state_01;
-                    break;
-                case 6:
-                    pmf = state_10;
-                    break;
-                case 7:
-                    pmf = state_11;
-                    break;
-            }
-
-            if (pmf == null) {
-                System.out.println(s[i]);
-            }
-
-            cuSum = 0d;
-            randomNumber = rng.nextDouble();
-            for (int j = 0; j < vocabSize; j++) {
-                cuSum += pmf[j];
-                if (cuSum > randomNumber) {
-                    y[i] = j;
-                    continue top_for ;
-                }
-            }
-            System.out.println("r = " + randomNumber + "cuSum = " + cuSum);
-            throw new RuntimeException("should not get here");
-        }
-    }
+     
 
     /*****************************REAL CODE STARTS HERE************************/
     
     public int[] y;
-    public MersenneTwisterFast rng;
+    public Random rng;
     
     private int[] s;
     private double[] u;
-    private HPYP transitionMatrix;
-    private HPYP likelihood;
+    private HierarchicalDirichletProcess transitionMatrix;
+    private Likelihood likelihood;
 
     public void initStates() {
         s = new int[s.length];
         for (int i = 0; i < s.length; i++) {
-            s[i] = (int) (10 * rng.nextDouble()) + 1;
+            s[i] = (int) (20 * rng.nextDouble()) + 1;
         }
     }
 
-    public void initTransitionMatrix(IntDiscreteDistribution baseDistribution) {
-        MutableDouble[] conc = new MutableDouble[]{new MutableDouble(0.4), new MutableDouble(3.8)};
-        MutableDouble[] disc = new MutableDouble[]{new MutableDouble(.2d), new MutableDouble(0.4d)};
-
-        transitionMatrix = new HPYP(disc, conc, baseDistribution, 1d, 100d);
+    public void initTransitionMatrix(DiscreteDistribution baseDistribution) {
+        transitionMatrix = new HierarchicalDirichletProcess(new double[]{20d, 30d}, baseDistribution, 100d);
 
         transitionMatrix.adjustCount(null, s[0], 1);
         for (int i = 1; i < s.length; i++) transitionMatrix.adjustCount(s[i - 1], s[i], 1);
-
-        for (int i = 0; i < 100; i++) transitionMatrix.sampleWeights();
+        for (int i = 0; i < 20; i++) transitionMatrix.sample();
     }
 
-    private void initLikelihood(int vocabSize) {
+    private void initLikelihood() {
+        likelihood = new MultinomialLikelihood(3,20);
         
-        MutableDouble[] conc = new MutableDouble[]{new MutableDouble(10), new MutableDouble(30)};
-        MutableDouble[] disc = new MutableDouble[]{new MutableDouble(.8d), new MutableDouble(0.9d)};
-
-        likelihood = new HPYP(disc, conc, new IntUniformDiscreteDistribution(vocabSize), 1d, 100d);
-
-        for(int i = 0; i < s.length; i++) likelihood.adjustCount(BinaryContext.toExpansion(s[i]), y[i], 1);
-
-        for (int i = 0; i < 100; i++) likelihood.sampleWeights();
-    }
-
-    private double likelihood(int state, int observation) {
-        return likelihood.probability(BinaryContext.toExpansion(state), observation);
+        for (int i = 0; i < s.length; i++) likelihood.adjustCount(s[i], y[i], 1);
+        for (int i = 0; i < 20; i++) likelihood.sample();
     }
 
     public void sample() {
+        int beta = 1;
+        double cuSum = 0.1, r = rng.nextDouble();
+        double p = 0.1;
+        double q = 0.9;
 
-        sampleAuxiliary(1d, 1000d);
+        while (r >= cuSum) {
+            p *= q;
+            cuSum += p;
+            beta++;
+        }
+
+        System.out.print(beta + ", ");
+
+        sampleAuxiliary(1d, (double) beta);
         sampleStates();
-        for (int i = 0; i < 10; i++) likelihood.sampleWeights();
-        for (int i = 0; i < 10; i++) transitionMatrix.sampleWeights();
+        for (int i = 0; i < 10; i++) likelihood.sample();
+        for (int i = 0; i < 10; i++) transitionMatrix.sample();
     }
 
     public double score() {
+        //System.out.print(transitionMatrix.score() + ", " + likelihood.score() + ", ");
         return transitionMatrix.score() + likelihood.score();
     }
 
@@ -207,6 +145,8 @@ public class IHMM {
         for (int i = 1; i < u.length; i++) {
             u[i] = RND.sampleBeta(alpha, beta) * transitionMatrix.probability(s[i - 1], s[i]);
         }
+        
+        //u = new double[y.length];
     }
 
     private void sampleStates() {
@@ -257,6 +197,16 @@ public class IHMM {
             forwardFilter[i] = filterEntry;
         }
 
+        /*
+        for (HashMap<Integer, MutableDouble> fe : forwardFilter){
+            System.out.print(fe.get(1).value());
+            for (int i = 2; i <= 20; i++) {
+                System.out.print(", " + fe.get(i).value());
+            }
+            System.out.println();
+        }
+        */
+
         // now do backwards sample
         double total = 0d, cuSum, r, pp;
         for (MutableDouble p : forwardFilter[s.length - 1].values()) {
@@ -298,13 +248,15 @@ public class IHMM {
 
         transitionMatrix.adjustCount(null, s[0], -1);
         transitionMatrix.adjustCount(null, sNew[0], 1);
-        likelihood.adjustCount(BinaryContext.toExpansion(s[0]), y[0], -1);
-        likelihood.adjustCount(BinaryContext.toExpansion(sNew[0]), y[0], 1);
+        likelihood.adjustCount(s[0], y[0], -1);
+        likelihood.adjustCount(sNew[0], y[0], 1);
+
         for (int i = 1; i < s.length; i++) {
             transitionMatrix.adjustCount(s[i - 1], s[i], -1);
             transitionMatrix.adjustCount(sNew[i - 1], sNew[i], 1);
-            likelihood.adjustCount(BinaryContext.toExpansion(s[i]), y[i], -1);
-            likelihood.adjustCount(BinaryContext.toExpansion(sNew[i]), y[i], 1);
+            
+            likelihood.adjustCount(s[i], y[i], -1);
+            likelihood.adjustCount(sNew[i], y[i], 1);
         }
 
         s = sNew;
@@ -313,7 +265,7 @@ public class IHMM {
     private void normalizeAndMultByY(HashMap<Integer, MutableDouble> fe, int index) {
         double m = 0d;
         for (Entry<Integer, MutableDouble> entry : fe.entrySet()) {
-            entry.getValue().timesEquals(likelihood(entry.getKey(), y[index]));
+            entry.getValue().timesEquals(likelihood.probability(entry.getKey(), y[index]));
             m = m > entry.getValue().value() ? m : entry.getValue().value();
         }
 
@@ -326,9 +278,10 @@ public class IHMM {
     
     private class DecreasingStates {
 
-        private Iterator<IntDoublePair> iter;
         public int[] types = new int[0];
         public double[] probs = new double[0];
+
+        private Iterator<IntDoublePair> iter;
 
         public DecreasingStates(Iterator<IntDoublePair> iterator) {
             iter = iterator;
@@ -343,9 +296,9 @@ public class IHMM {
                 IntDoublePair pair;
                 while (iter.hasNext()) {
                     pair = iter.next();
-                    newTypes.add(pair.i);
-                    newProbs.add(pair.d);
-                    if (pair.d <= minProb) {
+                    newTypes.add(pair.intValue());
+                    newProbs.add(pair.doubleValue());
+                    if (pair.doubleValue() <= minProb) {
                         break;
                     }
                 }

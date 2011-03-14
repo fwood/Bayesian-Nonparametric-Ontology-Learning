@@ -7,6 +7,7 @@ package edu.columbia.stat.wood.hdp;
 
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map.Entry;
 
 /**
  *
@@ -17,17 +18,31 @@ public class UniformDistribution extends DiscreteDistribution {
     private final double p;
     private HashMap<Integer,MutableInt> counts;
     private int alphabetSize;
+    private int offset;
     
 
     public UniformDistribution (int alphabetSize) {
         this.alphabetSize = alphabetSize;
         p = 1d / (double) alphabetSize;
         counts = new HashMap<Integer,MutableInt>();
+        this.offset = 0;
     }
+    
+    public UniformDistribution(int alphabetSize, int offset) {
+        this.alphabetSize = alphabetSize;
+        p = 1d / (double) alphabetSize;
+        counts = new HashMap<Integer,MutableInt>();
+        this.offset = offset;
+    }
+    
 
     @Override
     public double probability(int type) {
-        return p;
+        if (type >= offset && type < (offset + alphabetSize)) {
+            return p;
+        } else { 
+            return 0d;
+        }
     }
 
     @Override
@@ -55,9 +70,8 @@ public class UniformDistribution extends DiscreteDistribution {
     @Override
     public double score() {
         double score = 0d;
-        double logp = Math.log(p);
-        for (MutableInt count : counts.values()) {
-            score += count.value() * p;
+        for (Entry<Integer, MutableInt> entry : counts.entrySet()){
+            score += entry.getValue().value() * Math.log(probability(entry.getKey()));
         }
         return score;
     }
@@ -67,13 +81,12 @@ public class UniformDistribution extends DiscreteDistribution {
         return new UniformIterator();
     }
 
-
     private class UniformIterator implements Iterator<IntDoublePair> {
-        private int next = 0;
+        private int next = offset;
 
         @Override
         public boolean hasNext() {
-            return next < alphabetSize;
+            return next < (alphabetSize + offset);
         }
 
         @Override

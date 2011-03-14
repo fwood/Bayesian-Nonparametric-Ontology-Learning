@@ -9,7 +9,6 @@ import edu.columbia.stat.wood.stickbreakinghpyp.Restaurant.SortedPartialDistribu
 import edu.columbia.stat.wood.stickbreakinghpyp.util.IntDiscreteDistribution;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.IntDoublePair;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.IntUniformDiscreteDistribution;
-import edu.columbia.stat.wood.stickbreakinghpyp.util.MersenneTwisterFast;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.MutableDouble;
 import edu.columbia.stat.wood.stickbreakinghpyp.util.RND;
 import java.io.BufferedInputStream;
@@ -17,6 +16,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Random;
 
 /**
  *
@@ -41,7 +41,7 @@ public class HPYP {
             conc[i] = new MutableDouble(0.01);
         }
 
-        HPYP hpyp = new HPYP(disc, conc, new IntUniformDiscreteDistribution(256), 1,100);
+        HPYP hpyp = new HPYP(conc, disc, new IntUniformDiscreteDistribution(256),100);
 
         try{
             bis = new BufferedInputStream(new FileInputStream(f));
@@ -63,7 +63,7 @@ public class HPYP {
             //hpyp.printConcentrations();
             //hpyp.printDiscounts();
 
-            for (int i = 0; i < 1000; i++) {
+            for (int i = 0; i < 100; i++) {
                 hpyp.sampleWeights();
                 System.out.println(hpyp.score());
                 //hpyp.printDiscounts();
@@ -85,39 +85,46 @@ public class HPYP {
         }
     }
 
-    private MersenneTwisterFast rng;
+    private Random rng;
     private Restaurant ecr;
     private BaseRestaurant root;
     private MutableDouble[] discounts;
     private MutableDouble[] concentrations;
-    private double alpha, beta;
+    private double concentrationMean;
 
-    public HPYP(MutableDouble[] discounts, MutableDouble[] concentrations, IntDiscreteDistribution baseDistribution, double alpha, double beta) {
-        if (baseDistribution == null) {
-            throw new IllegalArgumentException("base distribution must be specified");
+    public HPYP(MutableDouble[] concentrations, MutableDouble[] discounts, IntDiscreteDistribution baseDistribution, double concentrationMean, Random rng) {
+        if (baseDistribution == null || discounts.length != concentrations.length || concentrationMean <= 0d) {
+            throw new IllegalArgumentException("bad arguments");
         }
 
-        if(discounts != null && discounts.length != 0){
-            this.discounts = discounts;
-        } else {
-            this.discounts = new MutableDouble[]{new MutableDouble(0.5)};
-        }
-
-        if(concentrations != null && concentrations.length != 0){
-            this.concentrations = concentrations;
-        } else {
-            this.concentrations = new MutableDouble[]{new MutableDouble(8)};
-        }
-
-        if(this.concentrations.length != this.discounts.length){
-            throw new IllegalArgumentException("concentrations and discounts must have same length");
-        }
-
-        this.alpha = alpha;
-        this.beta = beta;
+        this.concentrations = concentrations;
+        this.discounts = discounts;
+        this.concentrationMean = concentrationMean;
         root = new BaseRestaurant(baseDistribution);
         ecr = new Restaurant(root, this.concentrations[0], this.discounts[0]);
-        rng = new MersenneTwisterFast(3);
+        this.rng = rng;
+        RND.setRNG(rng);
+    }
+
+    public HPYP(MutableDouble[] concentrations, MutableDouble[] discounts, IntDiscreteDistribution baseDistribution, double concentrationMean) {
+        this(concentrations, discounts, baseDistribution, concentrationMean, new Random());
+    }
+
+    public HPYP(double[] concentrations, double[] discounts, IntDiscreteDistribution baseDistribution, double concentrationMean) {
+        MutableDouble[] conc = new MutableDouble[concentrations.length];
+        MutableDouble[] disc = new MutableDouble[concentrations.length];
+
+        for (int i = 0; i < concentrations.length; i++) {
+            conc[i] = new MutableDouble(concentrations[i]);
+            disc[i] = new MutableDouble(discounts[i]);
+        }
+
+        this.concentrations = conc;
+        this.discounts = disc;
+        this.concentrationMean = concentrationMean;
+        root = new BaseRestaurant(baseDistribution);
+        ecr = new Restaurant(root, this.concentrations[0], this.discounts[0]);
+        rng = new Random();
         RND.setRNG(rng);
     }
 
@@ -165,7 +172,7 @@ public class HPYP {
 
         if(withHyperParams) {
             for (int i = 0; i < discounts.length; i++) {
-                score[i] += RND.logGammaLikelihood(concentrations[i].value(), alpha, beta);
+                score[i] -= concentrations[i].value() / concentrationMean;
             }
         }
         
@@ -269,9 +276,8 @@ public class HPYP {
         // choose to accept or reject each proposal
         for (int i = 0; i < discounts.length; i++) {
             double r = Math.exp(afterScore[i] - currentScore[i]);
-            r = r < 1.0 ? r : 1.0;
 
-            if (rng.nextBoolean(r)) {
+            if (rng.nextDouble() < r) {
                 currentScore[i] = afterScore[i];
             } else {
                 discounts[i].set(currentDiscounts[i]);
@@ -293,9 +299,8 @@ public class HPYP {
         double score = 0.0;
         for (int i = 0; i < discounts.length; i++) {
             double r = Math.exp(afterScore[i] - currentScore[i]);
-            r = r < 1.0 ? r : 1.0;
 
-            if (rng.nextBoolean(r)) {
+            if (rng.nextDouble() < r) {
                 score += afterScore[i];
             } else {
                 score += currentScore[i];

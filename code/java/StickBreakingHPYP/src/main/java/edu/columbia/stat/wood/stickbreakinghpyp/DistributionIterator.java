@@ -59,8 +59,8 @@ public class DistributionIterator implements Iterator<IntDoublePair> {
         if (iterIndex == 2) {
             while (iter2.hasNext()) {
                 next = iter2.next();
-                if (!keysAlreadyReturned.contains(next.i)) {
-                    next.d *= multiplier;
+                if (!keysAlreadyReturned.contains(next.intValue())) {
+                    next = new IntDoublePair(next.intValue(), multiplier * next.doubleValue());
                     break outer_if;
                 }
             }

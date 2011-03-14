@@ -5,8 +5,8 @@
 
 package edu.columbia.stat.wood.stickbreakinghpyp.util;
 
-import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Random;
 
 /**
  *
@@ -36,7 +36,7 @@ public class IntBinaryExpansionDistribution extends IntDiscreteDistribution {
     }
 
     @Override
-    public int generate(MersenneTwisterFast rng) {
+    public int generate(Random rng) {
         double p0 = (1d - b) / 2;
         double p1 = 1d - b;
         double r;

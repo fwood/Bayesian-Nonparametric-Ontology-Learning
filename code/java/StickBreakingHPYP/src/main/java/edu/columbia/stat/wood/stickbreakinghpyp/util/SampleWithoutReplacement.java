@@ -4,6 +4,8 @@
  */
 package edu.columbia.stat.wood.stickbreakinghpyp.util;
 
+import java.util.Random;
+
 /**
  * Class to provide static method to return a random ordering of the integers 0 - (n-1).
  * @author nicholasbartlett
@@ -16,7 +18,7 @@ public class SampleWithoutReplacement {
      * @param rng random number generator to be used
      * @return array of length n with the integers 0 - (n-1) in random order
      */
-    public static int[] sampleWithoutReplacement(int n, MersenneTwisterFast rng) {
+    public static int[] sampleWithoutReplacement(int n, Random rng) {
         int[] randomOrder = new int[n];
         double nn = n;
         int randomIndex, currentValue;
