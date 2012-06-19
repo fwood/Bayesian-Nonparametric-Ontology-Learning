@@ -1,0 +1,23 @@
+function str = embedding(Z,ind,m, words, current_embedding, fid)
+
+left_node = Z(ind,1);
+right_node = Z(ind,2);
+this_embedding = [current_embedding '0, '];
+if left_node <= m
+    fprintf(fid,[words{left_node} ', ' this_embedding '\n']);
+else
+    str =  embedding(Z,left_node-m,m,words,this_embedding,current_output);
+end
+
+this_embedding = [current_embedding '1, '];
+if right_node <= m
+    output = [words{right_node} ', ' this_embedding sprintf('\n')];
+    str = [str output];
+else
+    str = embedding(Z,right_node-m,m,words,this_embedding,str);
+end
+
+    
+%str
+%pause(.01)
+
